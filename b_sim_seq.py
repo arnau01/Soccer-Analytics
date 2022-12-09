@@ -29,7 +29,7 @@ warnings.filterwarnings('ignore')
 X_B = bs.X_B
 Y_B = bs.Y_B
 M = bs.M
-REBUILD_DATA = False
+REBUILD_DATA = bs.REBUILD_DATA
 # Amount of start actions to check similarity
 ST = 4
 bin_data = bs.file_name
@@ -94,7 +94,7 @@ def generate_hm(index,df_xy):
     cbar.outline.set_edgecolor('#efefef')
     cbar.outline.set_linewidth(2)
     # save the figure
-    dir_name = "./HM/{}/{}_{}_{}/".format(X_B*Y_B,len(index),ST,index[0])
+    dir_name = "./HM/{}/{}/{}/{}_{}/".format(X_B*Y_B,ST,bs.USE_ATOMIC,len(index),index[0])
     results_dir = os.path.join(dir_name)
     sample_file_name = "start_seq.png"
     if not os.path.isdir(results_dir):
@@ -135,17 +135,25 @@ if __name__ == '__main__':
     # Add conditions like attacking half
     matches, df_xy = find_sim(np_data)
     # Sum the top 5 matches
-    top_5 = 0
-    for m in matches[:5]:
-        top_5 += len(m)
-    top_5 = top_5/5
-    print(X_B*Y_B)
-    print("Average length of top 5 matches: {}".format(top_5))
+    # top_5 = 0
+    # for m in matches[:5]:
+    #     top_5 += len(m)
+    # top_5 = top_5/5
+    # print(X_B*Y_B)
+    # print("Average length of top 5 matches: {}".format(top_5))
     # print(matches[:5])
-
+    
+    
 
     if len(matches) == 0:
         print("No similar sequences")
     # Generate heatmap for similar sequences
     for i in range(len(matches[:3])) :        
         generate_hm(matches[i],df_xy)
+    
+    plt.clf()
+    fig = plt.hist([len(x) for x in matches], bins=len(matches[0]))
+    plt.title("Histogram of amount similar sequences")
+    plt.xlabel("Amount of similar sequences")
+    plt.ylabel("Frequency")
+    plt.savefig("./HM/{}/{}/hist.png".format(X_B*Y_B,ST,bs.USE_ATOMIC), dpi=300, bbox_inches='tight', pad_inches=0.1)

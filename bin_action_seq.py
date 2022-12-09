@@ -17,14 +17,14 @@ from tqdm import tqdm
 
 USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
-REBUILD_DATA = True
+REBUILD_DATA = False
 X_B = 16
 Y_B = 12
-M = 12
+M = 4
 
 if not os.path.isdir('./seq'):
         os.makedirs('./seq')
-file_name = './seq/b_u_data_seq_'+str(X_B)+'_'+str(M)+'.npz'
+file_name = './seq/b_u_data_seq_'+str(X_B)+'_'+str(M)+str(USE_ATOMIC)+'.npz'
 warnings.filterwarnings('ignore')
 # Using API to get data from StatsBomb
 SBL = StatsBombLoader()
@@ -98,8 +98,10 @@ def seq_array(n=1000, m=10):
         y_var_name = 'start_y'
 
     # check if file exists
-    if not os.path.isfile('pkl/barca_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
+    # Change this for to apply for all .pkl files
+    if not os.path.isfile('barca_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
 
+        print("Downloading raw data from StatsBomb")
         all_games = get_game_ids(comp_season_id)
 
         # Create a df of all games
@@ -110,7 +112,11 @@ def seq_array(n=1000, m=10):
         df.to_pickle('pkl/barca_data_atomic.pkl')
 
     else:
-        df = pd.read_pickle("pkl/barca_data_atomic.pkl")
+        # df = pd.read_pickle("pkl/barca_data_atomic.pkl")
+        print("Loading data from pickle")
+        sb_df = pd.read_pickle("../pkl_data/sb_all_data.pkl")
+        wy_df = pd.read_pickle("../pkl_data/wy_all_data.pkl")
+        df = pd.concat([sb_df, wy_df])
 
     # # filter for Barcelona games
     # Removed condition for now to check if Barcelona keep the ball
@@ -125,8 +131,8 @@ def seq_array(n=1000, m=10):
     # TO DO: condition for goals to be in correct bin
     x_b = X_B
     y_b = Y_B
-    df["x"] = (pd.cut(df["x"], bins=x_b, labels=False)+ 1) #* (105/x_b)
-    df["y"] = pd.cut(df["y"], bins=y_b, labels=False) #* (105/x_b)
+    df["x"] = (pd.cut(df[x_var_name], bins=x_b, labels=False)+ 1) #* (105/x_b)
+    df["y"] = pd.cut(df[y_var_name], bins=y_b, labels=False) #* (105/x_b)
     # Create a tuple x and y
     df["xy"] = list(zip(df["x"], df["y"]))
     # Create new column for unique bin id
@@ -142,7 +148,7 @@ def seq_array(n=1000, m=10):
 
         # get all the time, x, y positions
         # df_actions = df_game[["time_seconds", "type_name", "team_name", "x", "y"]]
-        df_actions = df_game[["time_seconds", "type_name", "team_name", "bin_id", "x", "y", "xy"]]
+        df_actions = df_game[["time_seconds", "type_name", "team_id", "bin_id", "x", "y", "xy"]]
         # create the sliding windows
         a = rolling_window(np.arange(len(df_actions)), m, (np.rint(m / 2)).astype(int))
 
@@ -152,11 +158,12 @@ def seq_array(n=1000, m=10):
 
 
         # get all column names that include "team_name_"
-        team_col_names = [col for col in df_test.columns if "team_name" in col]
+        team_col_names = [col for col in df_test.columns if "team_id" in col]
         action_col_names = [col for col in df_test.columns if "type_name" in col]
 
         # Ensure only permitted actions and Barcelona keep the ball are included (and not the opposition) | Want to change this to be same team keeps the ball
-        df_test_filtered = df_test.loc[df_test[action_col_names].isin(simple_actions_allowed).all(axis=1) & df_test[team_col_names].isin(team_allowed).all(axis=1)]
+        # df_test_filtered = df_test.loc[df_test[action_col_names].isin(simple_actions_allowed).all(axis=1) & df_test[team_col_names].isin(team_allowed).all(axis=1)]
+        df_test_filtered = df_test.loc[df_test[action_col_names].isin(simple_actions_allowed).all(axis=1) & df_test[team_col_names].nunique(axis=1) == 1]
         # extract just the time, x, y columns
         time_second_names = [col for col in df_test_filtered.columns if "time_seconds_" in col]
         x_names = [col for col in df_test_filtered.columns if "x_" in col]
