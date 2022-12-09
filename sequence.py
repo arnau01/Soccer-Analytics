@@ -9,7 +9,7 @@ import sb_pipeline
 import wy_pipeline
 
 REBUILD_DATA = False
-USE_ATOMIC = sb_pipeline.USE_ATOMIC
+USE_ATOMIC = False
 
 # Create a list of n sequences
 # (n being a variable which is set to say 1000).

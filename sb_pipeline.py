@@ -12,15 +12,15 @@ from tqdm import tqdm
 warnings.filterwarnings('ignore')
 
 DOWNLOAD_RAW_DATA = False
-USE_ATOMIC = True
+# USE_ATOMIC = True
 IMPORT_ALL_DATA = True
 
 class SBPipeline:
     """Class for building the StatsBomb pipeline"""
 
-    def __init__(self):
+    def __init__(self,use_atomic = False):
         self.SBL = StatsBombLoader()
-    
+        self.use_atomic = use_atomic
     # Function to get all the competitions and seasons for SB
     def sb_get_all_comp_seasons(self):
         comps = self.SBL.competitions()
@@ -87,35 +87,35 @@ class SBPipeline:
     def run_pipeline(self):
         comp_season_id = self.sb_get_all_comp_seasons()
         games = self.get_game_ids(comp_season_id)
-        if USE_ATOMIC :
+        if self.use_atomic :
             if IMPORT_ALL_DATA:
                 # check if file exists
-                if not os.path.isfile('sb_all_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
+                if not os.path.isfile('../pkl_data/sb_all_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
                     df = self.get_all_atomic_actions(games)
-                    df.to_pickle('sb_all_data_atomic.pkl')
+                    df.to_pickle('../pkl_data/sb_all_data_atomic.pkl')
                 else:
-                    df = pd.read_pickle("sb_all_data_atomic.pkl")
+                    df = pd.read_pickle("../pkl_data/sb_all_data_atomic.pkl")
             else:
                 # check if file exists
-                if not os.path.isfile('sb_barca_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
+                if not os.path.isfile('../pkl_data/sb_barca_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
                     df = self.get_all_atomic_actions(games)
-                    df.to_pickle('sb_barca_data_atomic.pkl')
+                    df.to_pickle('../pkl_data/sb_barca_data_atomic.pkl')
                 else:
-                    df = pd.read_pickle("sb_barca_data_atomic.pkl")
+                    df = pd.read_pickle("../pkl_data/sb_barca_data_atomic.pkl")
         else:
             if IMPORT_ALL_DATA:
                 # check if file exists
-                if not os.path.isfile('sb_all_data.pkl') or DOWNLOAD_RAW_DATA:
+                if not os.path.isfile('../pkl_data/sb_all_data.pkl') or DOWNLOAD_RAW_DATA:
                     df = self.get_all_actions(games)
-                    df.to_pickle('sb_all_data.pkl')
+                    df.to_pickle('../pkl_data/sb_all_data.pkl')
                 else:
-                    df = pd.read_pickle("sb_all_data.pkl")
+                    df = pd.read_pickle("../pkl_data/sb_all_data.pkl")
             else:
                 # check if file exists
-                if not os.path.isfile('sb_barca_data.pkl') or DOWNLOAD_RAW_DATA:
+                if not os.path.isfile('../pkl_data/sb_barca_data.pkl') or DOWNLOAD_RAW_DATA:
                     df = self.get_all_actions(games)
-                    df.to_pickle('sb_barca_data.pkl')
+                    df.to_pickle('../pkl_data/sb_barca_data.pkl')
                 else:
-                    df = pd.read_pickle("sb_barca_data.pkl")
+                    df = pd.read_pickle("../pkl_data/sb_barca_data.pkl")
         return df
     

@@ -14,14 +14,15 @@ import sb_pipeline as sb
 warnings.filterwarnings('ignore')
 
 DOWNLOAD_RAW_DATA = False
-USE_ATOMIC = sb.USE_ATOMIC
+# USE_ATOMIC = sb.USE_ATOMIC
 # Could add import all data here condition
 
 class wyPipeline:
     """Class for building the Wyscout pipeline"""
 
-    def __init__(self):
+    def __init__(self,use_atomic = False):
         self.W = PublicWyscoutLoader()
+        self.use_atomic = use_atomic
     
     # Function to get all the competitions and seasons for wy
     def wy_get_all_comp_seasons(self):
@@ -86,20 +87,20 @@ class wyPipeline:
     def run_pipeline(self):
         comp_season_id = self.wy_get_all_comp_seasons()
         games = self.get_game_ids(comp_season_id)
-        if USE_ATOMIC :
+        if self.use_atomic :
             # check if file exists
-            if not os.path.isfile('wy_all_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
+            if not os.path.isfile('../pkl_data/wy_all_data_atomic.pkl') or DOWNLOAD_RAW_DATA:
                 df = self.get_all_atomic_actions(games)
-                df.to_pickle('wy_all_data_atomic.pkl')
+                df.to_pickle('../pkl_data/wy_all_data_atomic.pkl')
             else:
-                df = pd.read_pickle("wy_all_data_atomic.pkl")
+                df = pd.read_pickle("../pkl_data/wy_all_data_atomic.pkl")
             
         else:
             # check if file exists
-            if not os.path.isfile('wy_all_data.pkl') or DOWNLOAD_RAW_DATA:
+            if not os.path.isfile('../pkl_data/wy_all_data.pkl') or DOWNLOAD_RAW_DATA:
                 df = self.get_all_actions(games)
-                df.to_pickle('wy_all_data.pkl')
+                df.to_pickle('../pkl_data/wy_all_data.pkl')
             else:
-                df = pd.read_pickle("wy_all_data.pkl")
+                df = pd.read_pickle("../pkl_data/wy_all_data.pkl")
                 df = spadl.add_names(df)
         return df
