@@ -3,3 +3,4 @@ HM/
 seq/
 .cache/
 __pycache__/
+notebooks/
