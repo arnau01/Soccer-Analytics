@@ -18,7 +18,7 @@ from tqdm import tqdm
 import sb_pipeline
 import wy_pipeline
 
-USE_ATOMIC = False
+USE_ATOMIC = True
 DOWNLOAD_RAW_DATA = False
 REBUILD_DATA = True
 X_B = 16
@@ -49,7 +49,7 @@ def rolling_window(a, window, slide):
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)[::slide]
 
-def seq_array(df,n=150000, m=10):
+def seq_array(df,n=150000000, m=10):
 
     
     # sort by game id and time
@@ -64,8 +64,10 @@ def seq_array(df,n=150000, m=10):
         x_var_name = 'start_x'
         y_var_name = 'start_y'
 
-    df[x_var_name] = (pd.cut(df[x_var_name], bins=X_B, labels=False)+ 1) #* (105/x_b)
-    df[y_var_name] = pd.cut(df[y_var_name], bins=Y_B, labels=False) #* (105/x_b)
+    # print(df.columns)
+
+    df[x_var_name] = (pd.cut(df[x_var_name], bins=X_B, labels=False)+1) #* (105/x_b)
+    df[y_var_name] = pd.cut(df[y_var_name], bins=Y_B, labels=False)+1 #* (105/x_b)
     # Create a tuple x and y
     df["xy"] = list(zip(df[x_var_name], df[y_var_name]))
     # Create new column for unique bin id
@@ -165,11 +167,11 @@ def main():
         wy_df = pd.DataFrame()
         # Importing SB data
         print("Importing SB data")
-        sb = sb_pipeline.SBPipeline()
+        sb = sb_pipeline.SBPipeline(use_atomic = USE_ATOMIC)
         sb_df = sb.run_pipeline()
 
         # Importing Wyscout data
-        wy = wy_pipeline.wyPipeline()
+        wy = wy_pipeline.wyPipeline(use_atomic = USE_ATOMIC)
         print("Importing Wyscout data")
         wy_df = wy.run_pipeline()
         
@@ -178,7 +180,7 @@ def main():
         
         random.seed(42)
         print("Creating sequences...")
-        seq_array(df, n=150000, m=M)
+        seq_array(df, n=150000000, m=M)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load(file_name,allow_pickle=True)

@@ -4,3 +4,4 @@ seq/
 .cache/
 __pycache__/
 notebooks/
+wyscout_data/
