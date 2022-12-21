@@ -5,3 +5,5 @@ seq/
 __pycache__/
 notebooks/
 wyscout_data/
+data_seq.npz  
+.DS_Store  

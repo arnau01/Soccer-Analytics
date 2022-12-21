@@ -18,9 +18,9 @@ from tqdm import tqdm
 import sb_pipeline
 import wy_pipeline
 
-USE_ATOMIC = True
+USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
-REBUILD_DATA = True
+REBUILD_DATA = False
 X_B = 16
 Y_B = 12
 M = 12
