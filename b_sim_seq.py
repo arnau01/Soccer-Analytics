@@ -114,7 +114,8 @@ if __name__ == '__main__':
 
     for i in range(len(matches[:3])) :        
         gp.generate_hm(matches[i],df_xy)
-        gp.generate_kde(matches[i],df_xy)
+        if len(matches[i]) > 5:
+            gp.generate_kde(matches[i],df_xy)
     
     gp.generate_charts(matches)
     gp.generate_charts(sim_round)

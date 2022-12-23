@@ -17,7 +17,7 @@ import bin_action_seq as bs
 ST = sim_seq.ST
 X_B = sim_seq.X_B
 Y_B = sim_seq.Y_B
-LIM = 1000
+LIM = 1500
 
 def generate_hm(index,df_xy):
     # df_match is the filtered df for matches
@@ -32,7 +32,7 @@ def generate_hm(index,df_xy):
 
     # Section to get x and y coordinates from df
 
-    start_seq = df_match.iloc[0, :ST]
+    start_seq = df_match.iloc[0, :ST+1]
     # Get x bin for all the actions, the x bin is the first number in the tuple
     x = pd.Series([i[0] for i in start_seq])*(105/X_B)
     y = pd.Series([i[1] for i in start_seq])*(68/Y_B)
@@ -83,6 +83,7 @@ def generate_kde(index,df_xy):
     plt.clf()
 
     df_match = df_xy.iloc[df_xy.index.isin(index)]
+    
     # Plot a kernel density estimate of locations of shots
     # mps.field("white",figsize=8, show=False)
     pitch = Pitch(pitch_type='statsbomb', line_zorder=2, pitch_color='#22312b', line_color='#efefef')
@@ -94,10 +95,9 @@ def generate_kde(index,df_xy):
     # create a dataframe with the x and y coordinates
     df = pd.DataFrame({'x': x, 'y': y})
     
-    sns.kdeplot(data=df,x='x',y='y', shade=True, shade_lowest=False, cmap="plasma")
+    sns.kdeplot(data=df,x='x',y='y', shade=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
     
     plt.axis("on")
-    # plt.show()
     # save the figure
     dir_name = "./HM/{}/{}/{}/{}_{}/".format(X_B*Y_B,ST,bs.USE_ATOMIC,len(index),index[0])
     results_dir = os.path.join(dir_name)
@@ -105,11 +105,10 @@ def generate_kde(index,df_xy):
     
     plt.savefig(results_dir + sample_file_name, dpi=300, bbox_inches='tight', pad_inches=0.1)
     
+
     for i in range(ST,len(df_match.columns)):
-        # print(i+1)
-        # Clear sns
         
-        pitch = Pitch(pitch_type='statsbomb', line_zorder=2, pitch_color='#22312b', line_color='#efefef')
+        pitch = Pitch( pitch_length=105, pitch_width=68,line_zorder=2, pitch_color='#22312b', line_color='#efefef')
         fig, ax = pitch.draw()
 
         # For each subsequent action get all the x and y coordinates
@@ -119,8 +118,8 @@ def generate_kde(index,df_xy):
         # create a dataframe with the x and y coordinates
         df = pd.DataFrame({'x': x_i, 'y': y_i})
         
-        sns.kdeplot(x=df.x,y=df.y, shade=True, shade_lowest=False, cmap="plasma")
-
+        sns.kdeplot(x=df.x,y=df.y, shade=True, shade_lowest=False, cmap="plasma",clip=((0, 120), (0, 80)))
+        
         plt.axis("on")
 
         sample_file_name = "kde_start_seq+{}.png".format(i+1)
