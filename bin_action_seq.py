@@ -20,9 +20,10 @@ import wy_pipeline
 
 USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
-REBUILD_DATA = False
-X_B = 16
-Y_B = 12
+REBUILD_DATA = True
+OFFENSIVE = False
+X_B = 12
+Y_B = 9
 M = 12
 
 if not os.path.isdir('./seq'):
@@ -96,9 +97,14 @@ def seq_array(df,n=150000000, m=10):
         # get all column names that include "team_name_"
         team_col_names = [col for col in df_test.columns if "team_id" in col]
         action_col_names = [col for col in df_test.columns if "type_name" in col]
+        x_col_names = [col for col in df_test.columns if x_var_name in col]
 
-        # Ensure only permitted actions and Barcelona keep the ball are included 
-        df_test_filtered = df_test.loc[df_test[action_col_names].isin(simple_actions_allowed).all(axis=1) & df_test[team_col_names].nunique(axis=1) == 1]
+        # Ensure only permitted actions, same team keep the ball and only in the attacking half
+        df_test_filtered = df_test.loc[df_test[action_col_names].isin(simple_actions_allowed).all(axis=1) 
+                                        & df_test[team_col_names].nunique(axis=1) == 1]
+                                        
+        if OFFENSIVE:
+            df_test_filtered = df_test_filtered[df_test_filtered[x_col_names].gt(int(X_B/2)-1).all(axis=1)]                               
 
         # extract just the time, x, y columns
         time_second_names = [col for col in df_test_filtered.columns if "time_seconds_" in col]

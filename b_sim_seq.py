@@ -36,6 +36,7 @@ REBUILD_DATA = bs.REBUILD_DATA
 ST = 4
 bin_data = bs.file_name
 
+
 def load_data():
     
     action_data = np.load(bin_data, allow_pickle=True)
