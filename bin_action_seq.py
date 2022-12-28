@@ -17,13 +17,14 @@ from tqdm import tqdm
 
 import sb_pipeline
 import wy_pipeline
+import opta_pipeline
 
 USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
 REBUILD_DATA = True
 OFFENSIVE = False
-X_B = 12
-Y_B = 9
+X_B = 8
+Y_B = 6
 M = 12
 
 if not os.path.isdir('./seq'):
@@ -177,12 +178,17 @@ def main():
         sb_df = sb.run_pipeline()
 
         # Importing Wyscout data
-        wy = wy_pipeline.wyPipeline(use_atomic = USE_ATOMIC)
-        print("Importing Wyscout data")
-        wy_df = wy.run_pipeline()
+        # wy = wy_pipeline.wyPipeline(use_atomic = USE_ATOMIC)
+        # print("Importing Wyscout data")
+        # wy_df = wy.run_pipeline()
         
+        # Importing Opta data
+        print("Importing Opta data")
+        op = opta_pipeline.OptaPipeline()
+        op_df = op.run_pipeline()
+
         # Concatenate the two dataframes
-        df = pd.concat([sb_df, wy_df])
+        df = pd.concat([sb_df, op_df])
         
         random.seed(42)
         print("Creating sequences...")

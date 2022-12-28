@@ -33,7 +33,7 @@ Y_B = bs.Y_B
 M = bs.M
 REBUILD_DATA = bs.REBUILD_DATA
 # Amount of start actions to check similarity
-ST = 4
+ST = 3
 bin_data = bs.file_name
 
 

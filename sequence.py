@@ -7,8 +7,9 @@ from tqdm import tqdm
 
 import sb_pipeline
 import wy_pipeline
+import opta_pipeline
 
-REBUILD_DATA = False
+REBUILD_DATA = True
 USE_ATOMIC = False
 
 # Create a list of n sequences
@@ -124,12 +125,17 @@ if __name__ == '__main__':
     sb_df = sb.run_pipeline()
 
     # Importing Wyscout data
-    wy = wy_pipeline.wyPipeline()
-    print("Importing Wyscout data")
-    wy_df = wy.run_pipeline()
-    
+    # wy = wy_pipeline.wyPipeline()
+    # print("Importing Wyscout data")
+    # wy_df = wy.run_pipeline()
+
+    # Importing Opta data
+    print("Importing Opta data")
+    op = opta_pipeline.OptaPipeline()
+    op_df = op.run_pipeline()
+
     # Concatenate the two dataframes
-    df = pd.concat([sb_df, wy_df])
+    df = pd.concat([sb_df, op_df])
     
     random.seed(42)
 
