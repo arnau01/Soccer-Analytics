@@ -148,11 +148,12 @@ def seq_array(df,n=150000000, m=10):
     # shuffle the sequences
     random.shuffle(sequences)
 
-    if n < len(sequences):
-        sequences = sequences[:n]
+    # if n < len(sequences):
+    #     sequences = sequences[:n]
 
     # save to npz file
     np.savez_compressed(file_name, sequences)
+    print(len(sequences))
 
 def main():
     random.seed(42)

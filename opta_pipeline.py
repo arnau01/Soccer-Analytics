@@ -9,7 +9,7 @@ import pandas as pd
 class OptaPipeline:
     """Class for building the StatsBomb pipeline"""
 
-    def __init__(self,use_atomic = False, data_dir = "../pkl_data/Opta/ws_ALL_17-22"):
+    def __init__(self,use_atomic = False, data_dir = "../pkl_data/Opta/ws_ALL_09-22"):
         self.use_atomic = use_atomic
         self.data_dir = data_dir
         if use_atomic:

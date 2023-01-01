@@ -16,7 +16,6 @@ from scipy.ndimage import gaussian_filter
 import seaborn as sns
 from socceraction.data.statsbomb import StatsBombLoader
 from tqdm import tqdm
-tqdm.pandas()
 import bin_action_seq as bs
 import gen_plot as gp
 
