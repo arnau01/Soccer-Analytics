@@ -6,11 +6,11 @@ import pickle
 import pandas as pd
 from tqdm import tqdm
 
-# Root directory for events (WhoScored Data to be extracted from zip file)
+# Root directory for events data (WhoScored Data to be extracted from zip file)
 ROOT = "/Users/arnauayerbe/soccerdata/data/WhoScored/events/"
 # Get home teams for each game id
 feed = feeds = {'whoscored': "{competition_id}-{season_id}/{game_id}.json",}
-opta = O.OptaLoader(root="/Users/arnauayerbe/soccerdata/data/WhoScored/events/",parser="whoscored",feeds=feed)
+opta = O.OptaLoader(root=ROOT,parser="whoscored",feeds=feed)
 
 def create_path(league,season):
     """
