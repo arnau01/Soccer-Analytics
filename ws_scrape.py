@@ -2,36 +2,6 @@ import os
 import soccerdata as sd
 import socceraction.atomic.spadl as atomicspadl
 import socceraction.spadl as spadl
-
-
-# Step 1: Initialise the scraper
-
-# Available leagues : 
-# ['ENG-Premier League',
-#  'ESP-La Liga',
-#  'FRA-Ligue 1',
-#  'GER-Bundesliga',
-#  'INT-World Cup',
-#  'ITA-Serie A']
-
-# Can be single league or list of leagues
-# league = "ENG-Premier League"
-# # Can be single season or list of seasons
-# season = [19]
-# id = league[:3] + str(season)
-# ws = sd.WhoScored(leagues=league, seasons=season)
-
-# Step 2: Get the events match data
-# def get_events():
-#     # if USE_ATOMIC:
-#     events_atom = ws.read_events(output_fmt="atomic-spadl")
-#     events_atom = atomicspadl.add_names(events_atom)
-
-#     # else:
-#     events = ws.read_events(output_fmt="spadl")
-#     events = spadl.add_names(events)
-    
-#     return events,events_atom
     
 
 # Fetch dataframes
@@ -39,8 +9,10 @@ if __name__ == '__main__':
 
 
     seasons = ['2009-2010','2010-2011','2011-2012','2012-2013','2013-2014','2014-2015','2015-2016','2016-2017']
-    leagues = ['ENG-Premier League','ESP-La Liga','FRA-Ligue 1','GER-Bundesliga','ITA-Serie A']
     
+    leagues = ['GER-Bundesliga','ITA-Serie A']
+
+    # leagues = ['FRA-Ligue 1']
     for i in range(len(leagues)):
         league = leagues[i]
         for j in range(len(seasons)):
