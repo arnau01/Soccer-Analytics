@@ -25,7 +25,7 @@ def create_path(league,season):
     """
     league_options = {
   "ENG": "ENG-Premier League_{season}",
-  "ESP": "ESP-La Liga_0910_{season}",
+  "ESP": "ESP-La Liga_{season}",
   "FRA": "FRA-Ligue 1_{season}",
   "GER": "GER-Bundesliga_{season}",
   "ITA": "ITA-Serie A_{season}",

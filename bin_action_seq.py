@@ -148,8 +148,8 @@ def seq_array(df,n=150000000, m=10):
     # shuffle the sequences
     random.shuffle(sequences)
 
-    # if n < len(sequences):
-    #     sequences = sequences[:n]
+    if n < len(sequences):
+       sequences = sequences[:n]
 
     # save to npz file
     np.savez_compressed(file_name, sequences)
@@ -157,19 +157,7 @@ def seq_array(df,n=150000000, m=10):
 
 def main():
     random.seed(42)
-
-    # # if file exists then load it
-    # if not os.path.isfile(file_name) or REBUILD_DATA:
-    #     print("Creating data...")
-    #     seq_array(n=200000000000, m=M)
-    # else:
-    #     action_data = np.load(file_name)
-    #     seq_names = action_data.files
-    #     print(len(seq_names))
-    #     for name in seq_names:
-    #         print(name)
-    #         np_data = action_data[name]
-    #         print(np_data)
+    
     if not os.path.isfile(file_name) or REBUILD_DATA:
         sb_df = pd.DataFrame()
         wy_df = pd.DataFrame()
