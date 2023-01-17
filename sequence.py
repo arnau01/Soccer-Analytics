@@ -12,6 +12,8 @@ import opta_pipeline
 REBUILD_DATA = True
 USE_ATOMIC = False
 
+m = 10
+
 # Create a list of n sequences
 # (n being a variable which is set to say 1000).
 # Where each sequence is created by picking a random time
@@ -45,7 +47,6 @@ def seq_array(df, n=1000, m=10):
     sequences = []
 
     for game_id, df_game in tqdm(df.groupby("game_id")):
-
         if USE_ATOMIC:
             # filter out rows where dx is zero and dy is zero
             df_game = df_game.loc[(df_game["dx"] != 0) | (df_game["dy"] != 0)]
@@ -136,13 +137,28 @@ if __name__ == '__main__':
 
     # Concatenate the two dataframes
     df = pd.concat([sb_df, op_df])
+    # Print amount of games
+    print("Number of games: ", len(df["game_id"].unique()))
     
+    
+    
+    # group the DataFrame by game_id, and count the number of events in each group
+    game_event_counts = df.groupby("game_id").size().reset_index(name='event_count')
+
+    # filter out games with less than 40 events
+    complete_games = game_event_counts[game_event_counts['event_count'] >= 40]
+
+    # use the game_id's from the `complete_games` DataFrame to filter the original DataFrame
+    df = df[df['game_id'].isin(complete_games['game_id'])]
+    
+    print("Number of complete games: ", len(df["game_id"].unique()))
+    print("Amount of potential sequences", len(df)/m)
     random.seed(42)
 
     # if file exists then load it
     if not os.path.isfile('data_seq.npz') or REBUILD_DATA:
         print("Creating sequences...")
-        seq_array(df, n=150000, m=10)
+        seq_array(df, n=150000, m=m)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load('data_seq.npz',allow_pickle=True)

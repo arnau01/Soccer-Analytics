@@ -89,6 +89,17 @@ def find_similar_rows_round(df):
     return find_sim(df_rounded) 
  
 
+def unique_seq(matches):
+    # Get unique sequences (I.e sequences which have 1 match)
+    unique = []
+    # Order matches in ascending order
+    matches.sort(key=len, reverse=True)
+    for i in range(len(matches)):
+        if len(matches[i])==1:
+            unique.append(matches[i])
+
+    return unique
+
 if __name__ == '__main__':
 
     # If file name exists, load it
@@ -105,8 +116,8 @@ if __name__ == '__main__':
     # Add conditions like attacking half
     matches = find_sim(df_b)
     
-    print("Finding similar sequences with rounding of bins")
-    sim_round = find_similar_rows_round(df_b)
+    # print("Finding similar sequences with rounding of bins")
+    # sim_round = find_similar_rows_round(df_b)
 
     if len(matches) == 0:
         print("No similar sequences")
@@ -114,8 +125,18 @@ if __name__ == '__main__':
 
     for i in range(len(matches[:3])) :        
         gp.generate_hm(matches[i],df_xy)
+
+        # Generate kde for sequences with more than 5 matches
         if len(matches[i]) > 5:
             gp.generate_kde(matches[i],df_xy)
     
     gp.generate_charts(matches)
-    gp.generate_charts(sim_round)
+    # gp.generate_charts(sim_round)
+
+    unique = unique_seq(matches)
+    print("Unique sequences: ", len(unique))
+
+    # Generate heatmap for unique sequences
+    gp.generate_heatmap_unique(unique,df_xy)
+    # Generate kde for unique sequences
+    gp.generate_kde_unique(unique,df_xy)

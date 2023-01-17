@@ -148,8 +148,8 @@ def seq_array(df,n=150000000, m=10):
     # shuffle the sequences
     random.shuffle(sequences)
 
-    if n < len(sequences):
-       sequences = sequences[:n]
+    # if n < len(sequences):
+    #    sequences = sequences[:n]
 
     # save to npz file
     np.savez_compressed(file_name, sequences)
@@ -178,10 +178,19 @@ def main():
 
         # Concatenate the two dataframes
         df = pd.concat([sb_df, op_df])
-        
+
+        # group the DataFrame by game_id, and count the number of events in each group
+        game_event_counts = df.groupby("game_id").size().reset_index(name='event_count')
+
+        # filter out games with less than 40 events
+        complete_games = game_event_counts[game_event_counts['event_count'] >= 40]
+
+        # use the game_id's from the `complete_games` DataFrame to filter the original DataFrame
+        df = df[df['game_id'].isin(complete_games['game_id'])]
+
         random.seed(42)
         print("Creating sequences...")
-        seq_array(df, n=150000000, m=M)
+        seq_array(df, n=150000, m=M)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load(file_name,allow_pickle=True)
