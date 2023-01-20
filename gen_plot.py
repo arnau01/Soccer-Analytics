@@ -127,66 +127,26 @@ def generate_kde(index,df_xy):
         plt.savefig(results_dir + sample_file_name, dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.clf()
 
-def generate_heatmap_unique(unique,df_xy):
-    # Plot a heatmap of the unique sequences
-    # Have an array of all the unique sequences index in the df_xy
-    # For each unique sequence index get the sequence and plot it as a heatmap
-    df_match = df_xy.iloc[df_xy.index.isin(unique)]
 
-
-    # def generate_heatmap(np_data,index,name):
-    pitch = Pitch(pitch_type='statsbomb', line_zorder=2, pitch_color='#22312b', line_color='#efefef')
-    fig, ax = pitch.draw()
-
-
-    # Section to get x and y coordinates from df
-
-    
-    # Get x bin for all the actions, the x bin is the first number in the tuple
-    x = pd.Series([i[0] for i in df_match])*(105/X_B)
-    y = pd.Series([i[1] for i in df_match])*(68/Y_B)
-
-    # Convert our sequence to the bin_statistic format
-    stats = pitch.bin_statistic(x, y,bins = (X_B,Y_B), statistic='count')
-    # print(start_seq[0])
-    # # Plot start_seq as a heatmap in pitch
-    pcm = pitch.heatmap(stats, cmap='plasma', ax=ax)
-    pcm = pitch.heatmap(stats, cmap='plasma', ax=ax)
-    cbar = fig.colorbar(pcm, ax=ax, shrink=0.6)
-    cbar.outline.set_edgecolor('#efefef')
-    cbar.outline.set_linewidth(2)
-    # save the figure
-    dir_name = "./HM/{}/{}/{}/{}_{}/".format(X_B*Y_B,ST,bs.USE_ATOMIC,len(unique),unique[0])
-    results_dir = os.path.join(dir_name)
-    sample_file_name = "unique_seq.png"
-    fig.savefig(results_dir + sample_file_name, dpi=300, bbox_inches='tight', pad_inches=0.1)
-
-def generate_kde_unique(unique,df_xy):
-
+def generate_kde_unique(df):
     plt.clf()
 
-    df_match = df_xy.iloc[df_xy.index.isin(unique)]
-    
     # Plot a kernel density estimate of locations of shots
     # mps.field("white",figsize=8, show=False)
     pitch = Pitch(pitch_type='statsbomb', line_zorder=2, pitch_color='#22312b', line_color='#efefef')
     fig, ax = pitch.draw()
     
-    # Get x bin for all the actions, the x bin is the first number in the tuple
-    x = pd.Series([i[0] for i in df_match])*(105/X_B)
-    y = pd.Series([i[1] for i in df_match])*(68/Y_B)
+    x = df.applymap(lambda x: x[0]).to_numpy().flatten()
+    y = df.applymap(lambda x: x[1]).to_numpy().flatten()
+    x = x * (105/X_B)
+    y = y * (68/Y_B)
     # create a dataframe with the x and y coordinates
-    df = pd.DataFrame({'x': x, 'y': y})
+    df_kde = pd.DataFrame({'x': x, 'y': y})
     
-    sns.kdeplot(data=df,x='x',y='y', shade=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
+    sns.kdeplot(data=df_kde,x='x',y='y', shade=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
     
     plt.axis("on")
-    # save the figure
-    dir_name = "./HM/{}/{}/{}/{}_{}/".format(X_B*Y_B,ST,bs.USE_ATOMIC,len(unique),unique[0])
-    results_dir = os.path.join(dir_name)
-    sample_file_name = "kde_unique_seq.png"
-    
-    plt.savefig(results_dir + sample_file_name, dpi=300, bbox_inches='tight', pad_inches=0.1)
+    plt.show()
 
 def generate_charts(matches):
 

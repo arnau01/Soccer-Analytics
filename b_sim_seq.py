@@ -1,5 +1,5 @@
 # ! pip install mplsoccer
-
+#%%
 import os
 import random
 import warnings
@@ -24,7 +24,7 @@ import gen_plot as gp
 # Then find what happens in all the next actions i
 
 
-
+#%%
 warnings.filterwarnings('ignore')
 # Amount of bins to adjust heatmap
 X_B = bs.X_B
@@ -32,12 +32,13 @@ Y_B = bs.Y_B
 M = bs.M
 REBUILD_DATA = bs.REBUILD_DATA
 # Amount of start actions to check similarity
-ST = 3
+ST = 2
 bin_data = bs.file_name
 
 
+
 def load_data():
-    
+    print("Loading bin file :", bin_data)
     action_data = np.load(bin_data, allow_pickle=True)
     seq_names = action_data.files
     # print(len(seq_names))
@@ -98,16 +99,43 @@ def unique_seq(matches):
         if len(matches[i])==1:
             unique.append(matches[i])
 
+    
     return unique
 
-if __name__ == '__main__':
 
+def check_half(df):
+    # df['off'] = df.apply(lambda row: row[0][0] > 4 and row[1][0] > 4, axis=1)
+    # Print percentage of sequences where both actions are in the attacking half 2dp
+    df['off'] = (df.iloc[:, :ST].applymap(lambda x: x[0]) > 4).all(axis=1)
+    # Only print two decimal places
+    print("Percentage of sequences where first actions are in the attacking half: ", 
+    round(df['off'].sum()/len(df)*100,2), "%")
+    
+    return df
+
+    
+    
+
+#%%
+
+if __name__ == '__main__':
+    print(bin_data)
     # If file name exists, load it
+    
     if os.path.exists(bin_data) and not REBUILD_DATA:
         df_b,df_xy = load_data()
+        print("Number of sequences: ", len(df_b))
+        # Non-duplicate sequences
+        print("Number of non-duplicate sequences: ", len(df_b.drop_duplicates()))
+        df_s = df_b.iloc[:, :ST]
+        # Only take into account last three columns (start actions)
+        non_dup = df_s.drop_duplicates()
+        print("Number of non-duplicate start sequences: ", len(non_dup))
+        
     
     # If bin file doesn't exist, create it
     else:
+        
         # Call main method from bin_action_seq.py
         bs.main()
         df_b,df_xy = load_data()
@@ -116,6 +144,10 @@ if __name__ == '__main__':
     # Add conditions like attacking half
     matches = find_sim(df_b)
     
+    # Print smallest and largest bin in each column
+    print(df_b.min())
+    print(df_b.max())
+
     # print("Finding similar sequences with rounding of bins")
     # sim_round = find_similar_rows_round(df_b)
 
@@ -123,20 +155,32 @@ if __name__ == '__main__':
         print("No similar sequences")
     # Generate heatmap for similar sequences
 
-    for i in range(len(matches[:3])) :        
-        gp.generate_hm(matches[i],df_xy)
+    # for i in range(len(matches[:3])) :        
+    #     gp.generate_hm(matches[i],df_xy)
 
-        # Generate kde for sequences with more than 5 matches
-        if len(matches[i]) > 5:
-            gp.generate_kde(matches[i],df_xy)
+    #     # Generate kde for sequences with more than 5 matches
+    #     if len(matches[i]) > 5:
+    #         gp.generate_kde(matches[i],df_xy)
     
     gp.generate_charts(matches)
     # gp.generate_charts(sim_round)
-
+    # %%
     unique = unique_seq(matches)
     print("Unique sequences: ", len(unique))
+    # Flatten all unique sequences to a single array
+    unique = [item for sublist in unique for item in sublist]
 
-    # Generate heatmap for unique sequences
-    gp.generate_heatmap_unique(unique,df_xy)
-    # Generate kde for unique sequences
-    gp.generate_kde_unique(unique,df_xy)
+
+    # Filter the df_s dataframe to only include unique sequences (indexes in unique)
+    df_xy_u = df_xy.iloc[unique]
+    
+
+    df_xy_u = df_xy_u.iloc[:, :ST]
+    
+
+    df_off = check_half(df_xy_u)
+
+    #%%
+    # gp.generate_kde_unique(df_xy_u.drop(columns=['off']))
+    
+# %%

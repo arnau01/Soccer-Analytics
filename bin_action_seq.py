@@ -4,8 +4,10 @@
 # ! pip install socceraction --user
 # ! pip install statsbombpy
 
+#%%
 import os
 import random
+import sys
 import warnings
 
 import numpy as np
@@ -18,18 +20,18 @@ from tqdm import tqdm
 import sb_pipeline
 import wy_pipeline
 import opta_pipeline
-
+#%%
 USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
-REBUILD_DATA = True
-OFFENSIVE = False
+REBUILD_DATA = False
+OFFENSIVE = True
 X_B = 8
 Y_B = 6
-M = 12
+M = 6
 
 if not os.path.isdir('./seq'):
         os.makedirs('./seq')
-file_name = './seq/b_u_data_seq_'+str(X_B)+'_'+str(M)+str(USE_ATOMIC)+'.npz'
+file_name = './seq/b_u_data_seq_'+str(X_B)+'_'+str(M)+str(USE_ATOMIC)+str(OFFENSIVE)+'.npz'
 warnings.filterwarnings('ignore')
 # Using API to get data from StatsBomb
 SBL = StatsBombLoader()
@@ -77,6 +79,7 @@ def seq_array(df,n=150000000, m=10):
     # I feel like there is a way of doing this without a for loop !
     sequences = []
 
+    
     for game_id, df_game in tqdm(df.groupby("game_id")):
 
         if USE_ATOMIC:
@@ -105,7 +108,7 @@ def seq_array(df,n=150000000, m=10):
                                         & df_test[team_col_names].nunique(axis=1) == 1]
                                         
         if OFFENSIVE:
-            df_test_filtered = df_test_filtered[df_test_filtered[x_col_names].gt(int(X_B/2)-1).all(axis=1)]                               
+            df_test_filtered = df_test_filtered[df_test_filtered[x_col_names].gt(int(X_B/2)).all(axis=1)]                               
 
         # extract just the time, x, y columns
         time_second_names = [col for col in df_test_filtered.columns if "time_seconds_" in col]
@@ -118,6 +121,7 @@ def seq_array(df,n=150000000, m=10):
 
         df_test_filtered = df_test_filtered[time_second_names + bin_id_names + xy_names ]
 
+        
 
         # convert every row of a dataframe to a numpy matrix of a given size - THIS IS DUMB WAY OF DOING IT
         for index, row in df_test_filtered.iterrows():
@@ -144,17 +148,17 @@ def seq_array(df,n=150000000, m=10):
             action_matrix[:, 0] = np.ma.masked_array(action_matrix[:, 0], mask=vpairs).filled(action_matrix[:, 0] + np.random.uniform(0.0, 0.5))
 
             sequences.append(action_matrix)
-
+            
     # shuffle the sequences
     random.shuffle(sequences)
 
     # if n < len(sequences):
     #    sequences = sequences[:n]
-
+    
     # save to npz file
     np.savez_compressed(file_name, sequences)
-    print(len(sequences))
 
+#%%
 def main():
     random.seed(42)
     
@@ -187,12 +191,15 @@ def main():
 
         # use the game_id's from the `complete_games` DataFrame to filter the original DataFrame
         df = df[df['game_id'].isin(complete_games['game_id'])]
-
+        
+        # Total events in the dataset : 
+        print("Total events in the dataset : ", len(df))
+        
         random.seed(42)
         print("Creating sequences...")
         seq_array(df, n=150000, m=M)
     else:
-        print("Loading existing data_seq.npz file!")
+        print(f"Loading existing {file_name} file!")
         action_data = np.load(file_name,allow_pickle=True)
         seq_names = action_data.files
         print(len(seq_names))
@@ -200,7 +207,10 @@ def main():
             print(name)
             np_data = action_data[name]
             print(np_data)
+
+#%%
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
 
     main()
+# %%
