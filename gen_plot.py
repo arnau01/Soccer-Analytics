@@ -17,7 +17,7 @@ import bin_action_seq as bs
 ST = sim_seq.ST
 X_B = sim_seq.X_B
 Y_B = sim_seq.Y_B
-LIM = 1500
+LIM = 500
 
 def generate_hm(index,df_xy):
     # df_match is the filtered df for matches
@@ -146,7 +146,12 @@ def generate_kde_unique(df):
     sns.kdeplot(data=df_kde,x='x',y='y', shade=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
     
     plt.axis("on")
-    plt.show()
+    # save the figure
+    dir_name = "./HM/{}/{}/".format(X_B*Y_B,ST,bs.USE_ATOMIC)
+    results_dir = os.path.join(dir_name)
+    sample_file_name = "kde_unique_seq_{}.png".format(bs.OFFENSIVE)
+    
+    plt.savefig(results_dir + sample_file_name, dpi=300, bbox_inches='tight', pad_inches=0.1)
 
 def generate_charts(matches):
 
@@ -181,13 +186,15 @@ def generate_charts(matches):
     plt.xlabel("Amount of similar sequences")
     plt.ylabel("Frequency")
     plt.ylim(0, LIM)
-    plt.xlim(1,10)
+    plt.xlim(1,15)
     plt.savefig("./HM/{}/{}/hist_{}_{}.png".format(X_B*Y_B,ST,bs.USE_ATOMIC,len(matches)), dpi=300, bbox_inches='tight', pad_inches=0.1)
 
     plt.clf()
 
     # Create a table of the unique lengths and their frequency
     table = pd.DataFrame({'Length':unique_lengths, 'Frequency':counts, 'Percentage':percent})
+    # Limit table size
+    table = table[table['Length'] <= 15]
     # Save the table as a plt figure
     fig, ax = plt.subplots()
     fig.patch.set_visible(False)

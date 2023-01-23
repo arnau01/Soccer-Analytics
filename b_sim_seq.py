@@ -4,6 +4,7 @@ import os
 import random
 import warnings
 
+import itertools
 import matplotlib.pyplot as plt
 import matplotsoccer as mps
 import numpy as np
@@ -73,22 +74,7 @@ def find_sim(df_b):
 
     return matches
 
-# Find similar actions by rounding to lowest and upper 5
-# Checks if two rows are similar have the same firs ST actions
 
-def find_similar_rows_round(df):
-    round_up_to_5 = lambda x: x + 5 - x % 5
-
-    # define a lambda function that rounds the value down to the nearest 5
-    round_down_to_5 = lambda x: x - x % 5
-
-    # create a new dataframe with rounded values
-    # df_rounded = df.progress_apply(lambda x: (round_down_to_5(x), round_up_to_5(x)))
-
-    df_rounded = df.apply(lambda x: round_down_to_5(x))
-
-    return find_sim(df_rounded) 
- 
 
 def unique_seq(matches):
     # Get unique sequences (I.e sequences which have 1 match)
@@ -119,7 +105,7 @@ def check_half(df):
 #%%
 
 if __name__ == '__main__':
-    print(bin_data)
+    
     # If file name exists, load it
     
     if os.path.exists(bin_data) and not REBUILD_DATA:
@@ -145,22 +131,19 @@ if __name__ == '__main__':
     matches = find_sim(df_b)
     
     # Print smallest and largest bin in each column
-    print(df_b.min())
-    print(df_b.max())
-
-    # print("Finding similar sequences with rounding of bins")
-    # sim_round = find_similar_rows_round(df_b)
+    # print(df_b.min())
+    # print(df_b.max())
 
     if len(matches) == 0:
         print("No similar sequences")
     # Generate heatmap for similar sequences
 
-    # for i in range(len(matches[:3])) :        
-    #     gp.generate_hm(matches[i],df_xy)
+    for i in range(len(matches[:3])) :        
+        gp.generate_hm(matches[i],df_xy)
 
-    #     # Generate kde for sequences with more than 5 matches
-    #     if len(matches[i]) > 5:
-    #         gp.generate_kde(matches[i],df_xy)
+        # Generate kde for sequences with more than 5 matches
+        # if len(matches[i]) > 5:
+        #     gp.generate_kde(matches[i],df_xy)
     
     gp.generate_charts(matches)
     # gp.generate_charts(sim_round)
@@ -168,19 +151,33 @@ if __name__ == '__main__':
     unique = unique_seq(matches)
     print("Unique sequences: ", len(unique))
     # Flatten all unique sequences to a single array
-    unique = [item for sublist in unique for item in sublist]
+    unique = list(itertools.chain.from_iterable(unique))
 
 
     # Filter the df_s dataframe to only include unique sequences (indexes in unique)
     df_xy_u = df_xy.iloc[unique]
+
     
 
     df_xy_u = df_xy_u.iloc[:, :ST]
     
 
-    df_off = check_half(df_xy_u)
+    # df_off = check_half(df_xy_u)
+
+    # Amount of sequences with less than 10 matches
+    # Sort matches in ascending order
+    matches.sort(key=len, reverse=False)
+    counter = 0
+    for i in range(len(matches)):
+        if len(matches[i]) < 10:
+            counter += 1
+        else:
+            break
+    print("Number of sequences with less than 10 matches: ", counter)
 
     #%%
-    # gp.generate_kde_unique(df_xy_u.drop(columns=['off']))
+
+    # Generate a KDE of where unique sequences happen
+    gp.generate_kde_unique(df_xy_u)
     
 # %%

@@ -9,7 +9,7 @@ import sb_pipeline
 import wy_pipeline
 import opta_pipeline
 
-REBUILD_DATA = True
+REBUILD_DATA = False
 USE_ATOMIC = False
 
 m = 10
@@ -158,12 +158,12 @@ if __name__ == '__main__':
     # if file exists then load it
     if not os.path.isfile('data_seq.npz') or REBUILD_DATA:
         print("Creating sequences...")
-        seq_array(df, n=150000, m=m)
+        seq_array(df, n=15000, m=m)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load('data_seq.npz',allow_pickle=True)
         seq_names = action_data.files
-        print(len(seq_names))
+        print(len(action_data[seq_names[0]]))
         for name in seq_names:
             print(name)
             np_data = action_data[name]
