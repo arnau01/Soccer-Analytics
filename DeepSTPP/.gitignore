@@ -92,6 +92,7 @@ models
 
 # Unused folders
 notebooks/
+references/
 reports/
 
 example.gif
