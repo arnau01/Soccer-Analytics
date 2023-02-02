@@ -129,6 +129,7 @@ def train_rmtpp(model, train_loader, val_loader, config, logger, device):
 
 
 def train(model, train_loader, val_loader, config, logger, device):
+    
     scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=50, gamma=0.2)
     best_eval = np.infty
     sll_meter = AverageMeter()
@@ -136,6 +137,7 @@ def train(model, train_loader, val_loader, config, logger, device):
     loss_meter = AverageMeter()
     
     for epoch in trange(config.epochs):
+        
         loss_total = 0
         model.train()
         for index, data in tenumerate(train_loader):
@@ -166,7 +168,7 @@ def train(model, train_loader, val_loader, config, logger, device):
             print("Evaluate")
             valloss, valspace, valtime = eval_loss(model, val_loader, device)
             logger.info("Val Loss {:5f} | Space: {:5f} | Time: {:5f}".format(valloss, valspace, valtime))
-            if valloss < best_eval:
+            if valloss < best_eval :
                 best_eval = valloss
                 best_model = copy.deepcopy(model)
 

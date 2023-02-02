@@ -9,3 +9,7 @@ data_seq.npz
 .DS_Store  
 *.ipynb
 ws_adjust.py
+*.mp4
+DeepSTPP/src/video/data_seq.mp4
+src/video/
+video/

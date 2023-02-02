@@ -37,7 +37,7 @@ EVAL_EPOCHS = 5
 NUM_BACKGROUND_POINTS = 0
 TOTAL_TIME = 30.0
 RELOAD_DATA = False
-TRAIN_MODEL = False
+TRAIN_MODEL = True
 TRAIN_RATIO = 0.9 #0.9
 VAL_RATIO = 0.05 #0.05
 TEST_RATIO = 0.05 #0.05
@@ -156,14 +156,18 @@ if __name__ == '__main__':
 
     print(f"Sequence length: {SEQUENCE_LENGTH}")
 
-    FORWARD_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
-    LOOKBACK_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
+    # FORWARD_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
+    # LOOKBACK_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
 
+    # Testing to see if the model can predict the next point given the previous 2 points
+    LOOKBACK_SEQ_LEN = 2
+    FORWARD_SEQ_LEN = 1
 
+    # Changed lookahead to 1 (predict 1)
     config = Namespace(hid_dim=128, emb_dim=128, out_dim=0,
                        lr=0.0003, momentum=0.9, epochs=N_EPOCHS, batch=BATCH_SIZE, opt='Adam', generate_type=True,
                        read_model=False, seq_len=FORWARD_SEQ_LEN, eval_epoch=EVAL_EPOCHS, s_min=1e-3, b_max=20,
-                       lookahead=2, alpha=0.1, z_dim=128, beta=1e-3, dropout=0, num_head=2,
+                       lookahead=1, alpha=0.1, z_dim=128, beta=1e-3, dropout=0, num_head=2,
                        nlayers=3, num_points=NUM_BACKGROUND_POINTS, infer_nstep=10000, infer_limit=13, clip=1.0,
                        constrain_b='sigmoid', sample=True, decoder_n_layer=3)
 
@@ -262,7 +266,7 @@ if __name__ == '__main__':
     # create video directory if it does not exist
     if not os.path.exists('video'):
         os.makedirs('video')
-        
+    print('creating video')
     plot_lambst_static(lambs, x_range, y_range, t_range, history=(his_s, his_t), decay=2,
                         scaler=None, fps=12, fn=f'video/data_seq.mp4')
 

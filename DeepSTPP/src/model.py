@@ -402,6 +402,7 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
 
         # Calculate spatial intensity
         N = len(s_grids) # number of grid points
+        
 
         s_x_ = torch.cat((st_x_[..., :-1], background), 1).repeat(N, 1, 1)
         s_diff = s_grids.unsqueeze(1) - s_x_
