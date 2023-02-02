@@ -25,8 +25,8 @@ USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
 REBUILD_DATA = False
 OFFENSIVE = False
-X_B = 6
-Y_B = 4
+X_B = 4
+Y_B = 3
 M = 6
 
 if not os.path.isdir('./seq'):
