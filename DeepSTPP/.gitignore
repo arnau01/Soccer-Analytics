@@ -104,3 +104,6 @@ MAKEFILE
 LICENSE
 src/video/
 video/
+*.npz 
+*.mp4 
+*.log                               

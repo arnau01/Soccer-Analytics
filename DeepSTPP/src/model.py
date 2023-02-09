@@ -163,13 +163,11 @@ def ll_no_events(w_i, b_i, tn_ti, t_ti):
     # return torch.sum(w_i / b_i * (torch.exp(-b_i * t_ti) - torch.exp(-b_i * tn_ti)), -1)
     z_safe = torch.sum(safe_division_masked(w_i, b_i) * (torch.exp(-b_i * t_ti) - torch.exp(-b_i * tn_ti)), -1)
     return z_safe
-
-# safe division using pytorch.masked
+    # safe division using pytorch.masked
 def safe_division_masked(x, y, eps=1e-12):
     mask = torch.abs(y) > eps
     y = y.masked_fill_(~mask, eps)
     return torch.div(x,y)
-
 
 def log_ft(t_ti, tn_ti, w_i, b_i):
     return ll_no_events(w_i, b_i, tn_ti, t_ti) + torch.log(t_intensity(w_i, b_i, t_ti))
@@ -402,7 +400,6 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
 
         # Calculate spatial intensity
         N = len(s_grids) # number of grid points
-        
 
         s_x_ = torch.cat((st_x_[..., :-1], background), 1).repeat(N, 1, 1)
         s_diff = s_grids.unsqueeze(1) - s_x_

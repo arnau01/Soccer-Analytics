@@ -20,6 +20,7 @@ import sys
 import random
 import logging
 import numpy as np
+from datetime import datetime
 
 from scipy import integrate
 from sklearn.metrics import mean_squared_error as MSE
@@ -31,16 +32,17 @@ from tqdm import tqdm, trange
 import torch
 from torch.utils.data import DataLoader
 
-BATCH_SIZE = 128 #32
+BATCH_SIZE =  128
 N_EPOCHS = 5 #250
 EVAL_EPOCHS = 5
 NUM_BACKGROUND_POINTS = 0
-TOTAL_TIME = 30.0
-RELOAD_DATA = False
+TOTAL_TIME = 75.0
+RELOAD_DATA = True
 TRAIN_MODEL = True
 TRAIN_RATIO = 0.9 #0.9
 VAL_RATIO = 0.05 #0.05
 TEST_RATIO = 0.05 #0.05
+DATA = 'data_seq_socc.npz' #data_seq.npz'
 #%%
 
 def summarize(data):
@@ -79,6 +81,13 @@ def split_dataset(seq, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1):
 
     return train_seq, val_seq, test_seq
 
+def test_debug():
+    # Function to create pre-defined test seq.
+    n = 750
+    data = np.array([[20,55,10],[38,55,10],[55,55,10]])
+    test_data = np.stack([data]*n)
+
+    return test_data
 
 class Namespace:
     def __init__(self, **kwargs):
@@ -108,9 +117,9 @@ if __name__ == '__main__':
 
 
     #check file exists
-    if not os.path.exists('data/processed/data_seq.npz') or RELOAD_DATA == True:
+    if not os.path.exists('data/processed/'+DATA) or RELOAD_DATA == True:
 
-        dataset = np.load('data/interim/data_seq.npz')
+        dataset = np.load('data/interim/'+DATA, allow_pickle=True)
 
         dataset = dataset['arr_0']
         train_seq, val_seq, test_seq = split_dataset(dataset, train_ratio=TRAIN_RATIO, val_ratio=VAL_RATIO,
@@ -124,14 +133,14 @@ if __name__ == '__main__':
         if not os.path.exists('data/processed'):
             os.makedirs('data/processed')
 
-        with open('data/processed/data_seq.npz', 'wb') as f:
+        with open('data/processed/'+DATA, 'wb') as f:
             np.savez_compressed(f,
                      train=np.array([np.array(seq) for seq in train_seq], dtype=object),
                      test=np.array([np.array(seq) for seq in test_seq], dtype=object),
                      val=np.array([np.array(seq) for seq in val_seq], dtype=object), )
 
 
-        print(f'Processed interim Data : saved to data/processed/data_seq.npz')
+        print(f'Processed interim Data : saved to data/processed/'+DATA)
 
 
     """The code below is used to set up customized c device on computer"""
@@ -146,28 +155,44 @@ if __name__ == '__main__':
     print("Number of cores: ", os.cpu_count())
 
 
-    npzf = np.load(f'data/processed/data_seq.npz', allow_pickle=True)
+    npzf = np.load(f'data/processed/'+DATA, allow_pickle=True)
 
     train_data = npzf['train']
     test_data = npzf['test']
+    # test_data = test_debug()
     val_data = npzf['val']
+    
 
+    
+    print(train_data)
     SEQUENCE_LENGTH = train_data.shape[1]
 
     print(f"Sequence length: {SEQUENCE_LENGTH}")
 
-    # FORWARD_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
-    # LOOKBACK_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
+    # FORWARD_SEQ_LEN -> USELESS
+    # LOOKBACK_SEQ_LEN -> Number of steps to be used as input in the training examples
+    # LOOKAHEAD -> Number of steps to be predicted in the training examples
 
-    # Testing to see if the model can predict the next point given the previous 2 points
-    LOOKBACK_SEQ_LEN = 2
-    FORWARD_SEQ_LEN = 1
+    FORWARD_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
+    LOOKBACK_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
+    
+    # Take the first 2 points as input
+    # LOOKBACK_SEQ_LEN = 3
+
+    # print(f"Forward sequence length: {FORWARD_SEQ_LEN}")
+    print(f"Lookback sequence length: {LOOKBACK_SEQ_LEN}")
+    # LOOKBACK_SEQ_LEN = 2
+    # FORWARD_SEQ_LEN = 2
+    # Predict the next point
+    LOOKAHEAD = 1 
+
+    # Lookback sequence length + Lookahead sequence length = Sequence length 
 
     # Changed lookahead to 1 (predict 1)
     config = Namespace(hid_dim=128, emb_dim=128, out_dim=0,
                        lr=0.0003, momentum=0.9, epochs=N_EPOCHS, batch=BATCH_SIZE, opt='Adam', generate_type=True,
                        read_model=False, seq_len=FORWARD_SEQ_LEN, eval_epoch=EVAL_EPOCHS, s_min=1e-3, b_max=20,
-                       lookahead=1, alpha=0.1, z_dim=128, beta=1e-3, dropout=0, num_head=2,
+                       lookahead=LOOKAHEAD, alpha=0.1, z_dim=128, beta=1e-3, dropout=0, num_head=2,
                        nlayers=3, num_points=NUM_BACKGROUND_POINTS, infer_nstep=10000, infer_limit=13, clip=1.0,
                        constrain_b='sigmoid', sample=True, decoder_n_layer=3)
 
@@ -210,9 +235,13 @@ if __name__ == '__main__':
     #%%
     print('Building Dataloader')
 
-    trainset = SlidingWindowWrapper(train_data_obj, lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True)
-    valset   = SlidingWindowWrapper(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
-    testset  = SlidingWindowWrapper(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
+    trainset = SlidingWindowWrapper(train_data_obj, lookback=LOOKBACK_SEQ_LEN, lookahead=LOOKAHEAD, normalized=True)
+    valset   = SlidingWindowWrapper(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=LOOKAHEAD, normalized=True, min=trainset.min, max=trainset.max)
+    testset  = SlidingWindowWrapper(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=LOOKAHEAD, normalized=True, min=trainset.min, max=trainset.max)
+
+
+
+
 
     train_loader = DataLoader(trainset, batch_size=config.batch, shuffle=True)
     val_loader = DataLoader(valset, batch_size=config.batch, shuffle=False)
@@ -249,7 +278,7 @@ if __name__ == '__main__':
     X_NSTEP = 100
     Y_NSTEP = 100
 
-
+    print('Testing model')
     lambs, x_range, y_range, t_range, his_s, his_t = calc_lamb(model, test_loader, config, device, scales, biases,
                                                                t_nstep=T_NSTEP, x_nstep=X_NSTEP, y_nstep=Y_NSTEP,
                                                                # xmax=x_max, ymax=y_max, xmin=x_min, ymin=y_min,
@@ -266,13 +295,17 @@ if __name__ == '__main__':
     # create video directory if it does not exist
     if not os.path.exists('video'):
         os.makedirs('video')
-    print('creating video')
+    print('Creating video')
+    # Get timestamp to add it to the video name
+    now = datetime.now()
+    # split DATA before the .npz
+    data_name = DATA.split('.')[0]
     plot_lambst_static(lambs, x_range, y_range, t_range, history=(his_s, his_t), decay=2,
-                        scaler=None, fps=12, fn=f'video/data_seq.mp4')
+                        scaler=None, fps=12, fn=f'video/'+data_name+str(N_EPOCHS)+'-'+now.strftime("%m-%d_%H-%M")+'.mp4')
 
 
     print('here')
 
-
+    print(test_data)
 
 # %%

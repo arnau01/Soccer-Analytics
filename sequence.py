@@ -9,10 +9,10 @@ import sb_pipeline
 import wy_pipeline
 import opta_pipeline
 
-REBUILD_DATA = False
+REBUILD_DATA = True
 USE_ATOMIC = False
 
-m = 10
+m = 4
 
 # Create a list of n sequences
 # (n being a variable which is set to say 1000).
@@ -30,7 +30,7 @@ def rolling_window(a, window, slide):
     strides = a.strides + (a.strides[-1],)
     return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)[::slide]
 
-def seq_array(df, n=1000, m=10):  
+def seq_array(df, n=15000, m=10):  
     # sort by game id and time
     df = df.sort_values(by=["game_id", "period_id", "time_seconds"])
 
@@ -131,14 +131,17 @@ if __name__ == '__main__':
     # wy_df = wy.run_pipeline()
 
     # Importing Opta data
-    print("Importing Opta data")
-    op = opta_pipeline.OptaPipeline()
-    op_df = op.run_pipeline()
+    # print("Importing Opta data")
+    # op = opta_pipeline.OptaPipeline()
+    # op_df = op.run_pipeline()
 
     # Concatenate the two dataframes
-    df = pd.concat([sb_df, op_df])
+    # df = pd.concat([sb_df, op_df])
+    df = sb_df
     # Print amount of games
     print("Number of games: ", len(df["game_id"].unique()))
+
+    # df = np.load("./DeepSTPP/src/data/interim/barca_data_atomic.pkl",allow_pickle=True)
     
     
     
@@ -158,7 +161,7 @@ if __name__ == '__main__':
     # if file exists then load it
     if not os.path.isfile('data_seq.npz') or REBUILD_DATA:
         print("Creating sequences...")
-        seq_array(df, n=15000, m=m)
+        seq_array(df, n=1500, m=m)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load('data_seq.npz',allow_pickle=True)

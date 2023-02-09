@@ -13,3 +13,6 @@ ws_adjust.py
 DeepSTPP/src/video/data_seq.mp4
 src/video/
 video/
+*.npz
+*.log
+
