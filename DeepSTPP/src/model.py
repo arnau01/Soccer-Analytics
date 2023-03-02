@@ -4,8 +4,19 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+import torch.nn.init as init
 
 from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
+from comet_ml import Experiment
+
+# Create an experiment with your api key
+experiment = Experiment(
+    api_key="jap0PWqwWCbPCum539y0HzWFO",
+    project_name="deepstpp",
+    workspace="arnau01",
+)
+
 
 """
 Return a square attention mask to only allow self-attention layers to attend the earlier positions
@@ -190,13 +201,44 @@ def t_intensity(w_i, b_i, t_ti):
     lamb_t = torch.sum(v_i, -1)
     return lamb_t
 
+# See how g2 changes before and after the optimization
+# Look at paper
+# See how the 2d gaussian is drawn
+# Change intialized values of parameters
+# If input is always expecting (maybe-> 1,1)
+# Check 2x2 if you give 1x1 do they lose a dimension?
+# Hard code time to 1
+# Then only gaussian should be changing
+# # #g2 has size (batch, seq_len)
 def s_intensity(w_i, b_i, t_ti, s_diff, inv_var):
-    v_i = w_i * torch.exp(-b_i * t_ti)
-    v_i = v_i / torch.sum(v_i, -1).unsqueeze(-1) # normalize
-    g2 = torch.sum(s_diff * inv_var * s_diff, -1)
+    # Time kernel
+    #v_i = w_i * torch.exp(-b_i * t_ti)
+    # # Added if statement to handle X|1
+    #if v_i.shape[1] > 1:
+    #    v_i = v_i / torch.sum(v_i, -1).unsqueeze(-1) # normalize
+    #v_i is dim(batch_size, seq_len)
+    # make it a tensor full of 1s
+    v_i = torch.ones_like(w_i)
+
+    # If v_i is the time kernel, then g2 is the spatial kernel
+    # g2 is wrong when 1|1 -> s_diff or inv_var are wrong
+    # g2 = torch.sum(s_diff * inv_var * s_diff, -1)
+    # Element-wise multiplication
+    temp = s_diff * inv_var * s_diff
+
+    # Summation along the last dimension (x,y summed)
+    g2 = torch.sum(temp, -1)
     g2 = torch.sqrt(torch.prod(inv_var, -1)) * torch.exp(-0.5*g2)/(2*np.pi)
+
+    # Dot product along last dimension of v_i and g2
+    # f_s_cond_t is dim(batch_size)
+    # Multiply v_i and g2 then sum the row
     f_s_cond_t = torch.sum(g2 * v_i, -1)
     return f_s_cond_t
+
+
+
+
 
 def intensity(w_i, b_i, t_ti, s_diff, inv_var):
     return t_intensity(w_i, b_i, t_ti) * s_intensity(w_i, b_i, t_ti, s_diff, inv_var)
@@ -217,10 +259,12 @@ class DeepSTPP(nn.Module):
         # VAE for predicting spatial intensity
         self.enc = Encoder(config, device)
         
-        output_dim = config.seq_len + config.num_points
+        output_dim = config.seq_len + config.num_points 
         self.w_dec = Decoder(config, output_dim, softplus=True)
         self.b_dec = Decoder(config, output_dim)
         self.s_dec = Decoder(config, output_dim * 2, softplus=True)
+        # Make sure variance is between lower than 0.001
+
         
         # Set prior as fixed parameter attached to Module
         self.z_prior_m = nn.Parameter(torch.zeros(1), requires_grad=False)
@@ -231,6 +275,12 @@ class DeepSTPP(nn.Module):
         self.num_points = config.num_points
         self.background = nn.Parameter(torch.rand((self.num_points, 2)), requires_grad=True)
         
+       
+        # Increase the magnitude of initial weights and biases to avoid vanishing gradients
+        for name, param in self.named_parameters():
+            if 'weight' in name:
+                param.data.normal_(0,0.1)
+
         self.optimizer = self.set_optimizer(config.opt, config.lr, config.momentum)
         self.to(device)
 
@@ -239,24 +289,73 @@ class DeepSTPP(nn.Module):
     st_x: [batch, seq_len, 3] (lat, lon, time)
     st_y: [batch, 1, 3]
     """
-    def loss(self, st_x, st_y):
-        batch = st_x.shape[0]
-        background = self.background.unsqueeze(0).repeat(batch, 1, 1)
+    # def loss(self, st_x, st_y):
+    #     batch = st_x.shape[0]
+    #     background = self.background.unsqueeze(0).repeat(batch, 1, 1)
         
-        s_diff = st_y[..., :2] - torch.cat((st_x[..., :2], background), 1) # s - s_i
-        t_cum = torch.cumsum(st_x[..., 2], -1)
+    #     #s_diff = st_y[..., :2] - torch.cat((st_x[..., :2], background), 1) # s - s_i
+    #     s_diff = st_y[..., :2] - st_x[..., :2]
+    #     t_cum = torch.cumsum(st_x[..., 2], -1)
         
-        tn_ti = t_cum[..., -1:] - t_cum # t_n - t_i
-        tn_ti = torch.cat((tn_ti, torch.zeros(batch, self.num_points).to(self.device)), -1)
-        t_ti  = tn_ti + st_y[..., 2] # t - t_i
 
-        [qm, qv], w_i, b_i, inv_var = self(st_x)
+    #     # Potential bug here (tn_ti has one more column than expected (full of zeros)
+    #     # Try thinking why this could be happening
+
+    #     tn_ti = t_cum[..., -1:] - t_cum # t_n - t_i
+    #     # Currently does nothing (bg is not used)
+    #     tn_ti = torch.cat((tn_ti, torch.zeros(batch, self.num_points).to(self.device)), -1)
+    #     # Add the time of target to each cell in tn_ti
+    #     t_ti  = tn_ti + st_y[..., 2] # t - t_i
+
+    #     [qm, qv], w_i, b_i, inv_var = self(st_x)
             
-        # Calculate likelihood
-        sll = torch.log(s_intensity(w_i, b_i, t_ti, s_diff, inv_var))
-        tll = log_ft(t_ti, tn_ti, w_i, b_i)
+    #     # Calculate likelihood
+    #     sll = torch.log(s_intensity(w_i, b_i, t_ti, s_diff, inv_var))
+    #     tll = log_ft(t_ti, tn_ti, w_i, b_i)
         
-        # KL Divergence
+    #     # KL Divergence
+    #     if self.config.sample:
+    #         kl = kl_normal(qm, qv, *self.z_prior).mean()
+    #         nelbo = kl - self.config.beta * (sll.mean() + tll.mean())
+    #     else:
+    #         nelbo = - (sll.mean() + tll.mean())
+
+
+    #     return nelbo, sll, tll
+   
+    def loss(self, st_x, st_y):
+        batch_size = st_x.shape[0]
+        
+
+        # Duplicate the background tensor to match the batch size
+        background = self.background.unsqueeze(0).repeat(batch_size, 1, 1)
+
+        # Compute the spatial difference between the target point and each input point
+        s_diff = st_y[..., :2] - st_x[..., :2]  # shape: (batch_size, input_points, 2)
+
+        # Compute the cumulative time up to each input point
+        t_cum = torch.cumsum(st_x[..., 2], dim=-1)  # shape: (batch_size, input_points)
+
+        # Compute the time difference between the target point and each input point
+        tn_ti = t_cum[:, -1:] - t_cum[:, :-1]  # shape: (batch_size, input_points - 1)
+
+        # Append zeros to the time difference tensor to match the spatial difference tensor
+        zeros = torch.zeros(batch_size, 1, dtype=tn_ti.dtype, device=tn_ti.device)
+        tn_ti = torch.cat([tn_ti, zeros], dim=1)  # shape: (batch_size, input_points)
+
+        # Compute the time elapsed between each input point and the target point
+        t_ti = tn_ti + st_y[..., 2]  # shape: (batch_size, input_points)
+
+        # Compute the predicted intensity, weights, biases, and inverse variance
+        [qm, qv], w_i, b_i, inv_var = self(st_x)
+
+        # Compute the log-likelihood of the spatial difference
+        sll = torch.log(s_intensity(w_i, b_i, t_ti, s_diff, inv_var))  # shape: (batch_size, input_points)
+
+        # Compute the log-transformed time likelihood
+        tll = log_ft(t_ti, tn_ti, w_i, b_i)  # shape: (batch_size, input_points)
+
+        # Compute the KL divergence between the variational distribution and the prior distribution
         if self.config.sample:
             kl = kl_normal(qm, qv, *self.z_prior).mean()
             nelbo = kl - self.config.beta * (sll.mean() + tll.mean())
@@ -264,8 +363,7 @@ class DeepSTPP(nn.Module):
             nelbo = - (sll.mean() + tll.mean())
 
         return nelbo, sll, tll
-   
-    
+
     def forward(self, st_x):        
         # Encode history locations and times
         if self.config.sample:
@@ -287,6 +385,9 @@ class DeepSTPP(nn.Module):
             b_i = torch.nn.functional.softplus(self.b_dec.decode(z))
         elif self.config.constrain_b is 'clamp':
             b_i = torch.clamp(self.b_dec.decode(z), -self.config.b_max, self.config.b_max)
+        # add relu option
+        elif self.config.constrain_b is 'relu':
+            b_i = torch.relu(self.b_dec.decode(z)) * self.config.b_max
         else:
             b_i = self.b_dec.decode(z)
                     
@@ -294,6 +395,8 @@ class DeepSTPP(nn.Module):
         
         s_x, s_y = torch.split(s_i, s_i.size(-1) // 2, dim=-1)
         inv_var = torch.stack((1 / s_x, 1 / s_y), -1)
+
+        
 
         return [qm, qv], w_i, b_i, inv_var
   
@@ -306,7 +409,7 @@ class DeepSTPP(nn.Module):
 
 
 """
-Calculate the uniformly samplded spatiotemporal intensity with a given
+Calculate the uniformly sampled spatiotemporal intensity with a given
 number of spatiotemporal steps  
 """
 def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.zeros(3),
@@ -320,14 +423,16 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
     st_y_cums = []
     for data in test_loader:
         st_x, st_y, st_x_cum, st_y_cum, (idx, _) = data
+        #st_x, st_y, st_x_cum, st_y_cum = data
         mask = idx == 0 # Get the first sequence only
+        
         st_xs.append(st_x[mask])
         st_ys.append(st_y[mask])
         st_x_cums.append(st_x_cum[mask])
         st_y_cums.append(st_y_cum[mask])
 
         if not torch.any(mask):
-            break
+           break
         
     # Stack the first sequence
     st_x = torch.cat(st_xs, 0).cpu()
@@ -360,6 +465,9 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
     
     # Discretize time
     t_start = st_x_cum[0, -1, -1].item()
+    
+    
+    
     t_step = (total_time - t_start) / (t_nstep - 1)
     if round_time:
         t_range = torch.arange(round(t_start)+1, round(total_time), 1.0)
@@ -375,9 +483,20 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
     b_i  = b_i.cpu().detach()
     inv_var = inv_var.cpu().detach()
     
-    # Convert to history
-    his_st     = torch.vstack((st_x[0], st_y.squeeze())).numpy()
-    his_st_cum = torch.vstack((st_x_cum[0], st_y_cum.squeeze())).numpy()
+
+    # Log parameters in comet w_i[0], b_i[0], inv_var[0]
+    experiment.log_parameter("w_i", w_i[0])
+    experiment.log_parameter("b_i", b_i[0])
+    experiment.log_parameter("inv_var", inv_var[0])
+    
+    # MINOR ERROR HERE -> Different dimensions
+
+    # his_st     = torch.vstack((st_x[0], st_y.squeeze())).numpy()
+    # his_st_cum = torch.vstack((st_x_cum[0], st_y_cum.squeeze())).numpy()
+
+    his_st = 0
+    his_st_cum = 0
+
 
     for t in tqdm(t_range):
         i = sum(st_x_cum[:, -1, -1] <= t) - 1 # index of corresponding history events
@@ -397,6 +516,8 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
         t_ti  = tn_ti + t_
 
         lamb_t = t_intensity(w_i_, b_i_, t_ti) / np.prod(scales)
+        
+        
 
         # Calculate spatial intensity
         N = len(s_grids) # number of grid points
@@ -411,9 +532,18 @@ def calc_lamb(model, test_loader, config, device, scales=np.ones(3), biases=np.z
 
         lamb = (lamb_s * lamb_t).view(x_nstep, y_nstep)
         lambs.append(lamb.numpy())
+        
+        # Trying to calculate spatial intesity heatmap
+        lamb_space = lamb_s.view(x_nstep, y_nstep)
+    # FUDGE
+    # # Apply a exp function to the intensity
+    # lambs = lambs/np.max(lambs)
+    # lambs = np.exp(lambs) - 1
+    
+    
 
     x_range = x_range.numpy() * scales[0] + biases[0]
     y_range = y_range.numpy() * scales[1] + biases[1]
     t_range = t_range.numpy()
 
-    return lambs, x_range, y_range, t_range, his_st_cum[:, :2], his_st_cum[:, 2]
+    return lambs, x_range, y_range, t_range#, his_st_cum[:, :2], his_st_cum[:, 2]

@@ -25,9 +25,9 @@ USE_ATOMIC = False
 DOWNLOAD_RAW_DATA = False
 REBUILD_DATA = False
 OFFENSIVE = False
-X_B = 4
-Y_B = 3
-M = 6
+X_B = 8
+Y_B = 6
+M = 3
 
 if not os.path.isdir('./seq'):
         os.makedirs('./seq')
@@ -152,8 +152,8 @@ def seq_array(df,n=150000000, m=10):
     # shuffle the sequences
     random.shuffle(sequences)
 
-    # if n < len(sequences):
-    #    sequences = sequences[:n]
+    if n < len(sequences):
+       sequences = sequences[:n]
     
     # save to npz file
     np.savez_compressed(file_name, sequences)
@@ -176,12 +176,14 @@ def main():
         # wy_df = wy.run_pipeline()
         
         # Importing Opta data
-        print("Importing Opta data")
-        op = opta_pipeline.OptaPipeline()
-        op_df = op.run_pipeline()
+        # print("Importing Opta data")
+        # op = opta_pipeline.OptaPipeline()
+        # op_df = op.run_pipeline()
+
+        df = sb_df
 
         # Concatenate the two dataframes
-        df = pd.concat([sb_df, op_df])
+        # df = pd.concat([sb_df, op_df])
 
         # group the DataFrame by game_id, and count the number of events in each group
         game_event_counts = df.groupby("game_id").size().reset_index(name='event_count')

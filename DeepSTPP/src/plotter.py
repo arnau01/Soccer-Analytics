@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import plotly.graph_objects as go
 from tqdm.auto import tqdm
+from mplsoccer import Pitch
+from datetime import datetime
+import os
+
 
 
 """
@@ -146,6 +150,11 @@ lambs: list, len(lambs) = len(t_range), element: [len(x_range), len(y_range)]
 """
 def plot_lambst_interactive(lambs, x_range, y_range, t_range, cmin=None, cmax=None, 
                             scaler=None, heatmap=False):
+
+    # POTENTIAL ISSUE HERE -> x_raange is set to 105
+    # Scaler may not be correct
+
+
     # Inverse transform the range to the actual scale
     if scaler is not None:
         x_range, y_range, t_range = inverse_transform(x_range, y_range, t_range, scaler)
@@ -167,6 +176,7 @@ def plot_lambst_interactive(lambs, x_range, y_range, t_range, cmin=None, cmax=No
                                                     cmax=cmax)], name="{:.2f}".format(t_range[i])))
     
     fig = go.Figure(frames=frames)
+    
     # Add data to be displayed before animation starts
     if heatmap:
         fig.add_trace(go.Heatmap(z=lambs[0], x=x_range, y=y_range, zmin=cmin, zmax=cmax))
@@ -224,6 +234,108 @@ def plot_lambst_interactive(lambs, x_range, y_range, t_range, cmin=None, cmax=No
         sliders=sliders
     )
     fig.show()
+
+
+def plot_lambst_on_football_pitch(lambs, x_range, y_range, t_range, data,lookback,forward,cmin=None, cmax=None, scaler=None):
+    # Create the football field
+    pitch = Pitch(line_color='#000009', line_zorder=2,pitch_length=105,pitch_width=68,pitch_type='uefa')
+    # specifying figure size (width, height)
+    
+    fig, ax = pitch.draw()
+    
+
+    x = data[:,:,1]
+    # y is the second column of each array
+    y = data[:,:,2]
+    t = data[:,:,0][0]
+
+    # Get the first lookback columns
+    x_back = x[:,:lookback]
+    y_back = y[:,:lookback]
+
+    x_for = x[:,lookback:lookback+forward]
+    y_for = y[:,lookback:lookback+forward]
+
+
+    
+    
+    t_pred = t[lookback:]
+    # Find the index in lambs which is closest to t_pred
+    # In t_range get the index which is closest or ideally equal to t_pred
+    # For each t_pred there is a corresponding lamb_st
+    idx=[]
+    for i in range(len(t_pred)):
+        idx.append(np.abs(t_range - t_pred[i]).argmin())
+        
+    # Flip lambs to have the correct orientation
+    lambs = np.flip(lambs, axis=1)
+
+    # Scatter of first points in color black
+    plt.scatter(x_back, y_back, color='black') 
+    # Draw an arrow -> from the first point to the second point 
+    for i in range(lookback-1):
+        ax.annotate("",
+                xy=(x[0][i+1], y[0][i+1]), xycoords='data',
+                xytext=(x[0][i], y[0][i]), textcoords='data',
+                
+                arrowprops=dict(arrowstyle="->",
+                                connectionstyle="arc3,rad=0",
+                                lw=2.5,
+                                shrinkA=20+(i*2), shrinkB=20+(i*2),
+                                ),
+                )
+    
+    # # Scatter of last two points in color red
+    plt.scatter(x_for, y_for, color='red')
+    # # Draw an arrow from the second to last point to the last point with direction
+    for i in range(forward):
+        ax.annotate("",
+                xy=(x[0][lookback+i], y[0][lookback+i]), xycoords='data',
+                xytext=(x[0][lookback-1+i], y[0][lookback-1+i]), textcoords='data',
+                arrowprops=dict(arrowstyle="->",
+                                connectionstyle="arc3,rad=0",
+                                lw=2.5,
+                                shrinkA=30+(i*2), shrinkB=30+(i*2),
+                                color='red'
+                                ),
+            )
+    
+    # Inverse transform the range to the actual scale
+    if scaler is not None:
+        x_range, y_range, t_range = inverse_transform(x_range, y_range, t_range, scaler)
+    
+    # Set color limits for the heatmap
+    if cmin is None:
+        cmin = 0
+    if cmax is "outlier":
+        cmax = np.max([np.max(lamb_st) for lamb_st in lambs])
+    if cmax is None:
+        cmax = np.max(lambs)
+    
+    
+    
+    # Plot the heatmap for each idx
+    # for i in range(forward):
+    #     # Make lambs the sum of all the lamb_idx
+    #     lambs_cum = np.sum(lambs[idx], axis=0)
+        
+        # Add a colorbar to the right of the field
+        
+
+    # im = ax.imshow(lambs[idx], cmap='plasma', vmin=cmin, vmax=cmax,extent=(0, 105, 0, 68))
+    im = ax.imshow(lambs[idx[forward-1]], cmap='plasma', vmin=cmin, vmax=cmax,extent=(0, 105, 0, 68))
+    # Add a colorbar to the right of the field
+    cbar = fig.colorbar(im, ax=ax, orientation='vertical')
+    
+    # Show the plot
+    # plt.show()
+    # Save the plot
+    now = datetime.now()
+    # if directory does not exist, create it
+    if not os.path.exists('predictions'):
+        os.makedirs('predictions')
+    fig.savefig('predictions/pred-'+now.strftime("%d_%H-%M")+'.png', dpi=300, bbox_inches='tight')
+
     
     
 
@@ -294,3 +406,25 @@ class TrajectoryPlotter:
     def show(self):
         fig = go.Figure(data=self.data, layout=self.layout)
         fig.show()
+
+## WiP - not working yet 
+# # Seeing how gamma changes with time
+
+# from model import s_intensity
+# # Function to plot spatial intensity heatmap
+# def plot_s_intensity(w_i, b_i, t_ti, inv_var, x_range=[0, 105], y_range=[0, 68]):
+#     # Define the spatial grid over which to plot the heatmap
+#     x_grid, y_grid = np.meshgrid(np.arange(x_range[0], x_range[1]+1), np.arange(y_range[0], y_range[1]+1))
+
+#     # Compute the spatial intensity at each grid point
+#     s_diff = torch.tensor(np.concatenate([x_grid.reshape(-1, 1), y_grid.reshape(-1, 1)], axis=1))
+#     spatial_intensity = s_intensity(w_i, b_i, t_ti, s_diff, inv_var)
+#     spatial_intensity = spatial_intensity.reshape(len(y_grid), len(x_grid))
+
+#     # Plot the heatmap using matplotlib
+#     fig, ax = plt.subplots()
+#     im = ax.imshow(spatial_intensity, cmap='plasma', origin='lower', extent=[x_range[0], x_range[1], y_range[0], y_range[1]])
+#     ax.set_xlabel('x')
+#     ax.set_ylabel('y')
+#     plt.colorbar(im)
+#     plt.show()

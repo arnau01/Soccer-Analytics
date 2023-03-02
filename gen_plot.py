@@ -95,7 +95,7 @@ def generate_kde(index,df_xy):
     # create a dataframe with the x and y coordinates
     df = pd.DataFrame({'x': x, 'y': y})
     
-    sns.kdeplot(data=df,x='x',y='y', shade=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
+    sns.kdeplot(data=df,x='x',y='y', fill=True, shade_lowest=False,cmap="plasma",clip=((0, 120), (0, 80)))
     
     plt.axis("on")
     # save the figure

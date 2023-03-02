@@ -8,9 +8,9 @@ import socceraction.spadl as spadl
 if __name__ == '__main__':
 
 
-    seasons = ['2009-2010','2010-2011','2011-2012','2012-2013','2013-2014','2014-2015','2015-2016','2016-2017']
+    seasons = ['2022-2023']
     
-    leagues = ['GER-Bundesliga','ITA-Serie A']
+    leagues = ['ENG-Premier League','ITA-Serie A']
 
     # leagues = ['FRA-Ligue 1']
     for i in range(len(leagues)):

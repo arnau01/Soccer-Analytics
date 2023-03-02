@@ -15,4 +15,7 @@ src/video/
 video/
 *.npz
 *.log
+*.png
+RAW-DSTPP/
+*.zip
 

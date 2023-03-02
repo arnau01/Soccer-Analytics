@@ -106,4 +106,6 @@ src/video/
 video/
 *.npz 
 *.mp4 
-*.log                               
+*.log         
+*.png  
+RAW-DSTPP/                    

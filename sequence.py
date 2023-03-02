@@ -10,9 +10,9 @@ import wy_pipeline
 import opta_pipeline
 
 REBUILD_DATA = True
-USE_ATOMIC = False
+USE_ATOMIC = True
 
-m = 4
+m = 5
 
 # Create a list of n sequences
 # (n being a variable which is set to say 1000).
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     # Print amount of games
     print("Number of games: ", len(df["game_id"].unique()))
 
-    # df = np.load("./DeepSTPP/src/data/interim/barca_data_atomic.pkl",allow_pickle=True)
+    df = np.load("./DeepSTPP/src/data/interim/barca_data_atomic.pkl",allow_pickle=True)
     
     
     
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     # if file exists then load it
     if not os.path.isfile('data_seq.npz') or REBUILD_DATA:
         print("Creating sequences...")
-        seq_array(df, n=1500, m=m)
+        seq_array(df, n=1000, m=m)
     else:
         print("Loading existing data_seq.npz file!")
         action_data = np.load('data_seq.npz',allow_pickle=True)

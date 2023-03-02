@@ -4,6 +4,14 @@ import copy
 
 from tqdm.auto import tqdm, trange
 from tqdm.contrib import tenumerate
+from comet_ml import Experiment
+
+# # Create an experiment with your api key
+experiment = Experiment(
+    api_key="jap0PWqwWCbPCum539y0HzWFO",
+    project_name="deepstpp",
+    workspace="arnau01",
+)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -65,6 +73,8 @@ def eval_loss(model, test_loader, device):
     
     for index, data in enumerate(test_loader):
         st_x, st_y, _, _, _ = data
+        #st_x, st_y, _, _ = data
+        
         loss, sll, tll = model.loss(st_x, st_y)
         
         loss_meter.update(loss.item())
@@ -101,7 +111,7 @@ def train_rmtpp(model, train_loader, val_loader, config, logger, device):
 
             model.optimizer.zero_grad()
             loss = model.loss(st_x, st_y)
-
+            
             if torch.isnan(loss):
                 print("Numerical error, quiting...")
                 return best_model
@@ -116,6 +126,7 @@ def train_rmtpp(model, train_loader, val_loader, config, logger, device):
         logger.info("In epochs {} | Loss: {:5f}".format(
             epoch, loss_meter.avg
         ))
+        
         if (epoch+1)%config.eval_epoch==0:
             print("Evaluate")
             valloss = eval_loss_rmtpp(model, val_loader, device)
@@ -130,7 +141,7 @@ def train_rmtpp(model, train_loader, val_loader, config, logger, device):
 
 def train(model, train_loader, val_loader, config, logger, device):
     
-    scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=50, gamma=0.2)
+    scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=150, gamma=0.2)
     best_eval = np.infty
     sll_meter = AverageMeter()
     tll_meter = AverageMeter()
@@ -140,23 +151,52 @@ def train(model, train_loader, val_loader, config, logger, device):
         
         loss_total = 0
         model.train()
+        
         for index, data in tenumerate(train_loader):
             st_x, st_y, _, _, _ = data
+            
+            
 
             model.optimizer.zero_grad()
+            # sll: (batch_size, 1) = spatial log-likelihood
             loss, sll, tll = model.loss(st_x, st_y)
 
             if torch.isnan(loss):
                 print("Numerical error, quiting...")
                 return best_model
-
+            _,w_i, b_i, inv_var = model(st_x.to(device))
             loss.backward()
+            # Track gradients of the parameters in the model
+            # Every 10 epochs
+            # if epoch % 5 == 0:
+            #     for name, param in model.named_parameters():
+            #             # dont log background gradients
+            #         if param.requires_grad and "background" not in name:
+            #             experiment.log_metric(name + "_grad", param.grad.mean(), step=epoch)
+
             torch.nn.utils.clip_grad_norm_(model.parameters(), config.clip)
             model.optimizer.step()
-
             loss_meter.update(loss.item())
             sll_meter.update(sll.mean())
             tll_meter.update(tll.mean())
+
+
+        # Track loss
+        experiment.log_metric("train_loss", loss_meter.avg, step=epoch)
+        experiment.log_metric("train_sll", sll_meter.avg, step=epoch)
+        # experiment.log_metric("train_tll", tll_meter.avg, step=epoch)
+
+        # Track w_i,b_i and t_ti
+        _, w_i, b_i, inv_var = model(st_x.to(device))
+        w_i  = w_i.cpu().detach()
+        b_i  = b_i.cpu().detach()
+        inv_var = inv_var.cpu().detach()
+        # experiment.log_metric("w_i", w_i.mean(), step=epoch)
+        # experiment.log_metric("b_i", b_i.mean(), step=epoch)
+        # experiment.log_metric("inv_var", inv_var.mean(), step=epoch)
+        # # Track learning rate and gamma
+        # experiment.log_metric("lr", model.optimizer.param_groups[0]['lr'], step=epoch)
+        
 
         scheduler.step()
 
@@ -173,6 +213,8 @@ def train(model, train_loader, val_loader, config, logger, device):
                 best_model = copy.deepcopy(model)
 
     print("training done!")
+    # Close comet experiment
+    # experiment.end()
     return best_model
 
 

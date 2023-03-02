@@ -27,17 +27,20 @@ from tqdm import tqdm, trange
 import torch
 from torch.utils.data import DataLoader
 from datetime import datetime
-BATCH_SIZE = 64 #128
-N_EPOCHS = 5
+# 100 EPOCHS | 1000 sequences
+BATCH_SIZE = 32 #128
+N_EPOCHS = 25
 EVAL_EPOCHS = 5
 NUM_BACKGROUND_POINTS = 0
-TOTAL_TIME = 75.0
+TOTAL_TIME = 40.0
 RELOAD_DATA = True
 TRAIN_MODEL = True
 TRAIN_RATIO = 0.9 #0.9
 VAL_RATIO = 0.05 #0.05
 TEST_RATIO = 0.05 #0.05​
-DATA = 'data_seq_socc.npz'
+DATA =  'data_seq_barca_5.npz'#'data_seq_socc.npz' ##'data_seq_barca_5.npz'#'data_seq_socc.npz' #
+
+
 
 def summarize(data):
     print(f'number of data: {len(data)}')
@@ -74,6 +77,20 @@ def split_dataset(seq, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1):
 
     return train_seq, val_seq, test_seq
 
+def test_debug():
+    # Function to create pre-defined test seq.
+    n = 750
+    t = np.arange(0, 4)
+    x = np.concatenate((np.full(1, 50), np.full(3, 100)))
+    y = np.concatenate((np.full(1, 40), np.full(3, 34)))
+    data = np.stack([t, x, y], axis=1)
+    #data = np.array([[0,90,10],[2,100,35]])#,[35,50,40],[40,90,60],[45,100,30],[50,100,34]])
+    # 10,30,50,90,100,100
+    # 60,15,40,60,30,34,40,50
+    test_data = np.stack([data]*n)
+
+    return test_data
+
 
 class Namespace:
     def __init__(self, **kwargs):
@@ -86,7 +103,7 @@ if __name__ == '__main__':
     # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:4000'
     if torch.cuda.is_available():
         torch.cuda.set_per_process_memory_fraction(0.8, device=None)
-
+    
 
     sys.path.append("src")
 
@@ -137,23 +154,35 @@ if __name__ == '__main__':
 
 
     npzf = np.load(path+'/data/processed/'+DATA, allow_pickle=True)
+    
 
-    train_data = npzf['train']
-    test_data = npzf['test']
-    val_data = npzf['val']
-    print(train_data[0])
+    # Keep only 2 first rows of each sequence
+    train_data = npzf['train'][:, :, :]
+    test_data = npzf['test'][:, :4, :]
+    # test_data = test_debug()
+    val_data = npzf['val'][:, :4, :]
+    #print(train_data[0])
     SEQUENCE_LENGTH = train_data.shape[1]
+    print(test_data[0])
 
     print(f"Sequence length: {SEQUENCE_LENGTH}")
 
-    FORWARD_SEQ_LEN = int(SEQUENCE_LENGTH / 2)
-    LOOKBACK_SEQ_LEN = int(SEQUENCE_LENGTH / 2)+1
+    FORWARD_SEQ_LEN = 2#int(SEQUENCE_LENGTH / 2)
+    LOOKBACK_SEQ_LEN = 2#int(SEQUENCE_LENGTH / 2)
+
+    # LOOKBACK_SEQ_LEN = 1
+    # FORWARD_SEQ_LEN = SEQUENCE_LENGTH - LOOKBACK_SEQ_LEN
+    # LOOKBACK_SEQ_LEN = 1
+    #FORWARD_SEQ_LEN = 1
+    
+    
 
     print(f"Number of training events: {LOOKBACK_SEQ_LEN}")
     print(f"Number of predictions: {FORWARD_SEQ_LEN}")
 
+    # lr = [0.01, 0.005, 0.0003]
     config = Namespace(hid_dim=128, emb_dim=128, out_dim=0,
-                       lr=0.0003, momentum=0.9, epochs=N_EPOCHS, batch=BATCH_SIZE, opt='Adam', generate_type=True,
+                       lr=0.001, momentum=0.9, epochs=N_EPOCHS, batch=BATCH_SIZE, opt='Adam', generate_type=True,
                        read_model=False, seq_len=FORWARD_SEQ_LEN, eval_epoch=EVAL_EPOCHS, s_min=1e-3, b_max=20,
                        lookahead=1, alpha=0.1, z_dim=128, beta=1e-3, dropout=0, num_head=2,
                        nlayers=3, num_points=NUM_BACKGROUND_POINTS, infer_nstep=10000, infer_limit=13, clip=1.0,
@@ -193,13 +222,17 @@ if __name__ == '__main__':
 
     print('Building Dataloader')
 
-    # trainset = SlidingWindowWrapper(train_data_obj, lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True)
-    # valset   = SlidingWindowWrapper(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
-    # testset  = SlidingWindowWrapper(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
+    trainset = SlidingWindowWrapper(train_data_obj, lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True)
+    valset   = SlidingWindowWrapper(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
+    testset  = SlidingWindowWrapper(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, lookahead=1, normalized=True, min=trainset.min, max=trainset.max)
 
-    trainset = Pre(train_data_obj, lookback=LOOKBACK_SEQ_LEN, normalized=True)
-    valset   = Pre(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, normalized=True, min=trainset.min, max=trainset.max)
-    testset  = Pre(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, normalized=True, min=trainset.min, max=trainset.max)
+    # Remove SlidingWindowWrapper (PreProcess) with own method
+
+    # Change this pre as it's wrong (st_Y should only have one row)
+
+    # trainset = Pre(train_data_obj, lookback=LOOKBACK_SEQ_LEN, normalized=True)
+    # valset   = Pre(val_data_obj,  lookback=LOOKBACK_SEQ_LEN, normalized=True,min=trainset.min, max=trainset.max)
+    # testset  = Pre(test_data_obj,  lookback=LOOKBACK_SEQ_LEN, normalized=True, min=trainset.min, max=trainset.max)
 
 
     train_loader = DataLoader(trainset, batch_size=config.batch, shuffle=True)
@@ -209,10 +242,11 @@ if __name__ == '__main__':
 
     scales = (trainset.max - trainset.min).cpu().numpy()
     biases = trainset.min.cpu().numpy()
+    
     # print(scales)
     # print(biases)
 
-    # torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
     # ​
     from model import DeepSTPP
     model = DeepSTPP(config, device)
@@ -239,23 +273,39 @@ if __name__ == '__main__':
     Y_NSTEP = 100
 
 
-    lambs, x_range, y_range, t_range, his_s, his_t = calc_lamb(model, test_loader, config, device, scales, biases,
+    # lambs, x_range, y_range, t_range, his_s, his_t = calc_lamb(model, test_loader, config, device, scales, biases,
+                                                            #    t_nstep=T_NSTEP, x_nstep=X_NSTEP, y_nstep=Y_NSTEP,
+                                                            #    xmax=105, ymax=68, xmin=0, ymin=0,
+                                                            #    total_time=TOTAL_TIME, round_time=False)
+
+    
+    # Removed his_s and his_t
+
+    lambs, x_range, y_range, t_range = calc_lamb(model, test_loader, config, device, scales, biases,
                                                                t_nstep=T_NSTEP, x_nstep=X_NSTEP, y_nstep=Y_NSTEP,
-                                                               # xmax=x_max, ymax=y_max, xmin=x_min, ymin=y_min,
+                                                               xmax=105, ymax=68, xmin=0, ymin=0,
                                                                total_time=TOTAL_TIME, round_time=False)
-
-
     # transpose all matrices in lambs list otherwise x/y are flipped !!!!
     lambs = [np.transpose(lamb, (1, 0)) for lamb in lambs]
 
-    from plotter import plot_lambst_static, plot_lambst_interactive
-
-    plot_lambst_interactive(lambs, x_range, y_range, t_range, heatmap=True)
-    now = datetime.now()
-    if not os.path.exists('video'):
-       os.mkdir('video')
-    plot_lambst_static(lambs, x_range, y_range, t_range, history=(his_s, his_t), decay=2,
-                        scaler=None, fps=12, fn=f'video/data_seq'+'-'+now.strftime("%m-%d_%H-%M")+str(N_EPOCHS)+'.mp4')
+    from plotter import plot_lambst_static, plot_lambst_interactive,plot_lambst_on_football_pitch #,plot_s_intensity
 
 
-    print('here')
+    plot_lambst_interactive(lambs, x_range, y_range, t_range,heatmap=True)
+
+
+    # _,w_i,b_i,t_ti,inv_var = t_param
+    # plot_s_intensity(w_i, b_i, t_ti, inv_var, x_range=[0, 105], y_range=[0, 68], gamma=1.0)
+
+
+
+    # plot_lambst_on_football_pitch(lambs, x_range, y_range,t_range,test_data,lookback=LOOKBACK_SEQ_LEN,forward=1)
+
+    # now = datetime.now()
+    # if not os.path.exists('video'):
+    #    os.mkdir('video')
+    # plot_lambst_static(lambs, x_range, y_range, t_range, history=(his_s, his_t), decay=2,
+    #                     scaler=None, fps=12, fn=f'video/data_seq'+'-'+now.strftime("%m-%d_%H-%M")+str(N_EPOCHS)+'.mp4')
+
+
+    # print('here')

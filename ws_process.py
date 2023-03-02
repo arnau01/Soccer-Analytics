@@ -189,7 +189,7 @@ def run(league,season,atomic=False):
 
 if __name__ == '__main__':
     
-    run(league='FRA',season='1415')
+    run(league='ENG',season='2223')
    
     
     
